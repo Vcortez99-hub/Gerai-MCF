@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autenticação - GerAI-MCF</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary: #2563EB;
+            --primary-dark: #1D4ED8;
+            --secondary: #0EA5E9;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+            --success: #10B981;
+            --dark: #0F172A;
+            --gray: #64748B;
+            --light-gray: #1E293B;
+            --white: #FFFFFF;
+            --shadow: 0 10px 25px rgba(0,0,0,0.2);
+            --border-radius: 12px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #334155 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: var(--white);
+        }
+
+        .auth-container {
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .logo p {
+            color: var(--gray);
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .auth-tabs {
+            display: flex;
+            background: var(--light-gray);
+            border-radius: var(--border-radius);
+            padding: 4px;
+            margin-bottom: 30px;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--gray);
+        }
+
+        .tab-button.active {
+            background: var(--white);
+            color: var(--primary);
+            box-shadow: var(--shadow);
+        }
+
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #F8FAFC;
+            font-size: 0.9rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 16px 20px;
+            border: 2px solid #475569;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            background: #1E293B;
+            color: #F8FAFC;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        }
+
+        .form-input::placeholder {
+            color: #94A3B8;
+        }
+
+        .form-input.error {
+            border-color: var(--danger);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px 24px;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: var(--white);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(79, 70, 229, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-loading {
+            position: relative;
+        }
+
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 16px 20px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: #059669;
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #DC2626;
+        }
+
+        .alert-info {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            color: #2563EB;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-small {
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+
+        .link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .link:hover {
+            text-decoration: underline;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #E2E8F0;
+        }
+
+        .divider span {
+            padding: 0 16px;
+            color: var(--gray);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .password-strength {
+            margin-top: 8px;
+            height: 4px;
+            border-radius: 2px;
+            background: #E2E8F0;
+            overflow: hidden;
+        }
+
+        .password-strength-bar {
+            height: 100%;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+            width: 0%;
+        }
+
+        .strength-weak {
+            background: var(--danger);
+            width: 25%;
+        }
+        .strength-fair {
+            background: var(--warning);
+            width: 50%;
+        }
+        .strength-good {
+            background: var(--secondary);
+            width: 75%;
+        }
+        .strength-strong {
+            background: var(--success);
+            width: 100%;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: rgba(30, 41, 59, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            width: 90%;
+            max-width: 400px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.show .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            color: #F8FAFC;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .modal-header p {
+            color: #94A3B8;
+            font-size: 0.9rem;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-secondary {
+            background: #475569;
+            color: #F8FAFC;
+            border: none;
+        }
+
+        .btn-secondary:hover {
+            background: #64748B;
+        }
+
+        @media (max-width: 640px) {
+            .auth-container {
+                padding: 30px 20px;
+                margin: 10px;
+            }
+
+            .logo h1 {
+                font-size: 2rem;
+            }
+
+            .modal-content {
+                margin: 20px;
+                width: calc(100% - 40px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="logo">
+            <h1>🧠 GerAI-MCF</h1>
+            <p>Gerador de Apresentações com IA</p>
+        </div>
+
+        <div class="auth-tabs">
+            <button class="tab-button active" onclick="switchTab('login')">Entrar</button>
+            <button class="tab-button" onclick="switchTab('register')">Cadastrar</button>
+        </div>
+
+        <div id="alerts"></div>
+
+        <!-- Login Form -->
+        <form id="loginForm" class="auth-form active">
+            <div class="form-group">
+                <label class="form-label" for="loginEmail">Email</label>
+                <input type="email" id="loginEmail" class="form-input" placeholder="seu@email.com" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="loginPassword">Senha</label>
+                <input type="password" id="loginPassword" class="form-input" placeholder="Sua senha" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="loginBtn">
+                Entrar
+            </button>
+
+            <div class="text-center">
+                <a href="#" class="link text-small" onclick="resetPassword()">Esqueci minha senha</a>
+            </div>
+        </form>
+
+        <!-- Register Form -->
+        <form id="registerForm" class="auth-form">
+            <div class="form-group">
+                <label class="form-label" for="registerName">Nome completo</label>
+                <input type="text" id="registerName" class="form-input" placeholder="Seu nome" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="registerEmail">Email</label>
+                <input type="email" id="registerEmail" class="form-input" placeholder="seu@email.com" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="registerCompany">Empresa (opcional)</label>
+                <input type="text" id="registerCompany" class="form-input" placeholder="Nome da empresa">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="registerPassword">Senha</label>
+                <input type="password" id="registerPassword" class="form-input" placeholder="Mínimo 6 caracteres" required>
+                <div class="password-strength">
+                    <div class="password-strength-bar" id="passwordStrengthBar"></div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="registerBtn">
+                Criar conta
+            </button>
+
+            <div class="text-center text-small">
+                Ao criar uma conta, você concorda com nossos
+                <a href="#" class="link">Termos de Uso</a>
+            </div>
+        </form>
+
+        <div class="divider">
+            <span>ou</span>
+        </div>
+
+        <div class="text-center">
+            <a href="/" class="link">← Voltar à página inicial</a>
+        </div>
+    </div>
+
+    <!-- Modal para Recuperação de Senha -->
+    <div class="modal-overlay" id="resetPasswordModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🔒 Redefinir Senha</h3>
+                <p>Digite seu email para receber as instruções de recuperação</p>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="resetEmail">Email</label>
+                    <input type="email" id="resetEmail" class="form-input" placeholder="seu@email.com" required>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeResetModal()" style="flex: 1;">
+                    Cancelar
+                </button>
+                <button class="btn btn-primary" onclick="sendResetEmail()" style="flex: 1;" id="resetBtn">
+                    Enviar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Supabase
+        const supabaseUrl = 'https://zoptilrqhxtnwdckpzil.supabase.co';
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvcHRpbHJxaHh0bndkY2twemlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjQ1MjIsImV4cCI6MjA3NDIwMDUyMn0.JUMOVWji92D6k0JdDz8ptj5s_kPtS6G1p3j-g4t-fdA';
+
+        const { createClient } = supabase;
+        const sb = createClient(supabaseUrl, supabaseAnonKey);
+
+        // Tab switching
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.auth-form').forEach(form => form.classList.remove('active'));
+
+            document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+            document.getElementById(`${tab}Form`).classList.add('active');
+
+            clearAlerts();
+        }
+
+        // Alert functions
+        function showAlert(message, type = 'info') {
+            const alertsContainer = document.getElementById('alerts');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alertsContainer.innerHTML = '';
+            alertsContainer.appendChild(alert);
+
+            if (type === 'success') {
+                setTimeout(() => alert.remove(), 5000);
+            }
+        }
+
+        function clearAlerts() {
+            document.getElementById('alerts').innerHTML = '';
+        }
+
+        // Password strength checker
+        function checkPasswordStrength(password) {
+            const strengthBar = document.getElementById('passwordStrengthBar');
+            let strength = 0;
+
+            if (password.length >= 6) strength++;
+            if (password.match(/[a-z]/)) strength++;
+            if (password.match(/[A-Z]/)) strength++;
+            if (password.match(/[0-9]/)) strength++;
+            if (password.match(/[^A-Za-z0-9]/)) strength++;
+
+            strengthBar.className = 'password-strength-bar';
+
+            if (strength >= 1) strengthBar.classList.add('strength-weak');
+            if (strength >= 2) strengthBar.classList.add('strength-fair');
+            if (strength >= 3) strengthBar.classList.add('strength-good');
+            if (strength >= 4) strengthBar.classList.add('strength-strong');
+        }
+
+        // Event listeners
+        document.getElementById('registerPassword').addEventListener('input', (e) => {
+            checkPasswordStrength(e.target.value);
+        });
+
+        // Login form handler
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const loginBtn = document.getElementById('loginBtn');
+
+            loginBtn.textContent = 'Entrando...';
+            loginBtn.classList.add('btn-loading');
+            loginBtn.disabled = true;
+
+            try {
+                const { data, error } = await sb.auth.signInWithPassword({
+                    email,
+                    password
+                });
+
+                if (error) {
+                    throw error;
+                }
+
+                showAlert('Login realizado com sucesso! Redirecionando...', 'success');
+
+                // Store session and redirect
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1500);
+
+            } catch (error) {
+                console.error('Login error:', error);
+                let message = 'Erro ao fazer login. Verifique suas credenciais.';
+
+                if (error.message.includes('Invalid login credentials')) {
+                    message = 'Email ou senha incorretos.';
+                } else if (error.message.includes('Email not confirmed')) {
+                    message = 'Por favor, confirme seu email antes de fazer login.';
+                }
+
+                showAlert(message, 'error');
+            } finally {
+                loginBtn.textContent = 'Entrar';
+                loginBtn.classList.remove('btn-loading');
+                loginBtn.disabled = false;
+            }
+        });
+
+        // Register form handler
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('registerName').value;
+            const email = document.getElementById('registerEmail').value;
+            const company = document.getElementById('registerCompany').value;
+            const password = document.getElementById('registerPassword').value;
+            const registerBtn = document.getElementById('registerBtn');
+
+            if (password.length < 6) {
+                showAlert('A senha deve ter pelo menos 6 caracteres.', 'error');
+                return;
+            }
+
+            registerBtn.textContent = 'Criando conta...';
+            registerBtn.classList.add('btn-loading');
+            registerBtn.disabled = true;
+
+            try {
+                const { data, error } = await sb.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        data: {
+                            name,
+                            company
+                        }
+                    }
+                });
+
+                if (error) {
+                    throw error;
+                }
+
+                showAlert(
+                    'Conta criada com sucesso! Verifique seu email para confirmar a conta.',
+                    'success'
+                );
+
+                // Clear form
+                document.getElementById('registerForm').reset();
+                document.getElementById('passwordStrengthBar').className = 'password-strength-bar';
+
+                // Switch to login tab after 3 seconds
+                setTimeout(() => {
+                    switchTab('login');
+                    showAlert('Agora você pode fazer login após confirmar seu email.', 'info');
+                }, 3000);
+
+            } catch (error) {
+                console.error('Register error:', error);
+                let message = 'Erro ao criar conta. Tente novamente.';
+
+                if (error.message.includes('already registered')) {
+                    message = 'Este email já está registrado. Tente fazer login.';
+                } else if (error.message.includes('Password should be')) {
+                    message = 'A senha deve ter pelo menos 6 caracteres.';
+                }
+
+                showAlert(message, 'error');
+            } finally {
+                registerBtn.textContent = 'Criar conta';
+                registerBtn.classList.remove('btn-loading');
+                registerBtn.disabled = false;
+            }
+        });
+
+        // Modal functions
+        function resetPassword() {
+            document.getElementById('resetPasswordModal').classList.add('show');
+            document.getElementById('resetEmail').focus();
+        }
+
+        function closeResetModal() {
+            document.getElementById('resetPasswordModal').classList.remove('show');
+            document.getElementById('resetEmail').value = '';
+        }
+
+        async function sendResetEmail() {
+            const email = document.getElementById('resetEmail').value;
+            const resetBtn = document.getElementById('resetBtn');
+
+            if (!email) {
+                showAlert('Por favor, digite seu email.', 'error');
+                return;
+            }
+
+            resetBtn.textContent = 'Enviando...';
+            resetBtn.disabled = true;
+
+            try {
+                const { error } = await sb.auth.resetPasswordForEmail(email, {
+                    redirectTo: window.location.origin + '/auth.html'
+                });
+
+                if (error) {
+                    throw error;
+                }
+
+                showAlert('Email de redefinição enviado! Verifique sua caixa de entrada.', 'success');
+                closeResetModal();
+
+            } catch (error) {
+                console.error('Reset password error:', error);
+                showAlert('Erro ao enviar email de redefinição.', 'error');
+            } finally {
+                resetBtn.textContent = 'Enviar';
+                resetBtn.disabled = false;
+            }
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('resetPasswordModal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                closeResetModal();
+            }
+        });
+
+        // Check if user is already logged in
+        sb.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' && session) {
+                window.location.href = '/';
+            }
+        });
+
+        // Check current session on page load
+        window.addEventListener('load', async () => {
+            const { data: { session } } = await sb.auth.getSession();
+            if (session) {
+                window.location.href = '/';
+            }
+        });
+    </script>
+</body>
+</html>

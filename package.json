@@ -1,0 +1,35 @@
+{
+  "name": "gerai-mcf",
+  "version": "1.0.0",
+  "description": "Gerador de Apresentações com IA - Modelo Corporativo Flexível",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build": "npm install"
+  },
+  "keywords": [
+    "presentation",
+    "ai",
+    "generator",
+    "html",
+    "template"
+  ],
+  "author": "GerAI-MCF",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.24.3",
+    "@supabase/supabase-js": "^2.57.4",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "fs-extra": "^11.1.1",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "1.4.4",
+    "nodemailer": "^7.0.6"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
