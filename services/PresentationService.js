@@ -17,18 +17,36 @@ class PresentationService {
 
   async generatePresentation(templateId, config, aiContent) {
     try {
-      const template = await this.loadTemplate(templateId);
-      const brandingConfig = await AssetLibrary.getBrandingConfig();
+      console.log('🎯 Generating presentation with type:', aiContent.type);
 
-      const presentation = await this.processTemplate(template, config, aiContent, brandingConfig);
+      let finalHTML;
+      let metadata = {};
+
+      if (aiContent.type === 'complete-html') {
+        // HTML completo gerado diretamente pela IA
+        finalHTML = aiContent.html;
+        console.log('✨ Using complete HTML from AI');
+      } else {
+        // Método antigo - processar template com JSON
+        const template = await this.loadTemplate(templateId);
+        const brandingConfig = await AssetLibrary.getBrandingConfig();
+        const presentation = await this.processTemplate(template, config, aiContent, brandingConfig);
+        finalHTML = presentation.html;
+        metadata = presentation.metadata;
+        console.log('🔄 Using legacy template processing');
+      }
 
       const presentationId = `pres_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const outputPath = path.join(this.generatedDir, `${presentationId}.html`);
 
-      await fs.writeFile(outputPath, presentation.html);
+      console.log('📝 Final HTML type:', typeof finalHTML);
+      console.log('📝 Final HTML defined:', finalHTML !== undefined);
+      console.log('📝 Final HTML length:', finalHTML ? finalHTML.length : 'N/A');
+
+      await fs.writeFile(outputPath, finalHTML || '<html><body><h1>Erro: HTML não gerado</h1></body></html>');
 
       await this.savePresentationMetadata(presentationId, {
-        templateId,
+        templateId: templateId || 'ai-generated',
         config,
         aiContent,
         generatedAt: new Date().toISOString(),
@@ -42,7 +60,7 @@ class PresentationService {
         path: outputPath,
         url: `/generated/${presentationId}.html`,
         preview: await this.generatePreview(outputPath),
-        metadata: presentation.metadata
+        metadata
       };
     } catch (error) {
       throw new Error(`Erro ao gerar apresentação: ${error.message}`);
@@ -51,6 +69,16 @@ class PresentationService {
 
   async loadTemplate(templateId) {
     try {
+      // Se for o templateId especial de AI, não precisamos carregar template físico
+      if (templateId === 'ai-generated-template') {
+        return {
+          id: templateId,
+          name: 'Template Gerado por IA',
+          content: null, // Não há template físico, HTML será gerado pela IA
+          isAIGenerated: true
+        };
+      }
+
       const templates = await TemplateService.listTemplates();
       const template = templates.find(t => t.id === templateId);
 
@@ -69,6 +97,20 @@ class PresentationService {
   }
 
   async processTemplate(template, config, aiContent, brandingConfig) {
+    // Se é template AI, não precisamos processar template físico
+    if (template.isAIGenerated || template.content === null) {
+      console.log('🎨 Using AI-generated HTML directly');
+      return {
+        html: aiContent.html, // HTML já vem pronto da IA
+        metadata: {
+          modules: [],
+          assets: [],
+          structure: { isAIGenerated: true }
+        }
+      };
+    }
+
+    // Processamento normal para templates físicos
     const $ = cheerio.load(template.content);
 
     await this.applyBrandingRules($, brandingConfig);
@@ -217,12 +259,20 @@ class PresentationService {
   }
 
   async populateContent($, aiContent) {
+    // Substituir título global
     if (aiContent.title) {
       $('title').text(aiContent.title);
       $('h1').first().text(aiContent.title);
     }
 
+    // Análise inteligente do template para identificar estrutura
+    const templateStructure = this.analyzeTemplateStructure($);
+    console.log('📋 Template structure detected:', templateStructure);
+
+    // Estratégia mais inteligente de substituição de conteúdo
     for (const [moduleType, moduleData] of Object.entries(aiContent.modules || {})) {
+      console.log(`🔄 Processing module: ${moduleType}`);
+
       // Buscar elementos específicos primeiro
       let moduleElements = $(`[data-module="${moduleType}"]`);
 
@@ -232,17 +282,17 @@ class PresentationService {
         moduleElements = $(`.${moduleType}, #${moduleType}, .slide-${moduleType}`);
       }
 
+      // Tentar encontrar por padrões de conteúdo existente
+      if (moduleElements.length === 0) {
+        moduleElements = this.findElementsByContentPattern($, moduleType, moduleData);
+      }
+
       // Se ainda não encontrar, criar uma seção genérica
       if (moduleElements.length === 0) {
-        const newSection = $(`
-          <section class="gerai-slide gerai-${moduleType}" data-module="${moduleType}">
-            <h2 data-ai-role="title"></h2>
-            <div data-ai-role="description"></div>
-            <div data-ai-role="list"></div>
-          </section>
-        `);
+        const newSection = this.createModuleSection(moduleType, moduleData);
         $('body').append(newSection);
-        moduleElements = newSection;
+        moduleElements = $(newSection);
+        console.log(`✨ Created new section for module: ${moduleType}`);
       }
 
       moduleElements.each((i, elem) => {
@@ -310,6 +360,152 @@ class PresentationService {
     if (aiContent.suggestedAssets) {
       await this.applySuggestedAssets($, aiContent.suggestedAssets);
     }
+
+    // Pós-processamento inteligente
+    this.enhanceContentRelevance($, aiContent);
+  }
+
+  analyzeTemplateStructure($) {
+    return {
+      totalElements: $('*').length,
+      sections: $('section, div.slide, .slide, article').length,
+      headings: $('h1, h2, h3, h4, h5, h6').length,
+      lists: $('ul, ol').length,
+      images: $('img').length,
+      hasDataAttributes: $('[data-*]').length > 0,
+      hasSlideStructure: $('.slide, [data-slide], section').length > 0,
+      textContent: $('body').text().length
+    };
+  }
+
+  findElementsByContentPattern($, moduleType, moduleData) {
+    // Mapear tipos de módulo para padrões de busca
+    const contentPatterns = {
+      'capa': 'h1, .title, .hero, .cover, .intro',
+      'agenda': '.agenda, .outline, .toc, ul:first, ol:first',
+      'problema': '.problem, .challenge, .issue, .current',
+      'solucao': '.solution, .strategy, .approach, .method',
+      'comparativo': '.compare, .comparison, .before-after, .vs',
+      'cases': '.case, .example, .success, .study',
+      'metricas': '.metrics, .kpi, .results, .numbers, .stats',
+      'timeline': '.timeline, .roadmap, .schedule, .phases',
+      'conclusao': '.conclusion, .summary, .next, .action'
+    };
+
+    const pattern = contentPatterns[moduleType] || 'div, section, article';
+    return $(pattern).filter((i, elem) => {
+      const $elem = $(elem);
+      const text = $elem.text().toLowerCase();
+
+      // Verificar se o elemento parece estar vazio ou com placeholder
+      return text.length > 10 && (
+        text.includes('lorem') ||
+        text.includes('ipsum') ||
+        text.includes('placeholder') ||
+        text.includes('your content') ||
+        text.includes('title here') ||
+        $elem.find('*').length < 3
+      );
+    }).first();
+  }
+
+  createModuleSection(moduleType, moduleData) {
+    const sectionClass = `gerai-slide gerai-${moduleType}`;
+
+    let sectionContent = `
+      <section class="${sectionClass}" data-module="${moduleType}">
+        <div class="slide-container">
+    `;
+
+    // Adicionar título se existir
+    if (moduleData.title) {
+      sectionContent += `<h2 class="slide-title">${moduleData.title}</h2>`;
+    }
+
+    // Adicionar conteúdo se existir
+    if (moduleData.content) {
+      sectionContent += `<div class="slide-content">${moduleData.content}</div>`;
+    }
+
+    // Adicionar lista se existir
+    if (moduleData.bullets && moduleData.bullets.length > 0) {
+      sectionContent += '<ul class="slide-list">';
+      moduleData.bullets.forEach(bullet => {
+        sectionContent += `<li>${bullet}</li>`;
+      });
+      sectionContent += '</ul>';
+    }
+
+    // Adicionar métricas se existir
+    if (moduleData.metrics && moduleType === 'metricas') {
+      sectionContent += '<div class="metrics-container">';
+      moduleData.metrics.forEach(metric => {
+        sectionContent += `
+          <div class="metric-item">
+            <div class="metric-value">${metric.value}</div>
+            <div class="metric-label">${metric.label}</div>
+            ${metric.description ? `<div class="metric-description">${metric.description}</div>` : ''}
+          </div>
+        `;
+      });
+      sectionContent += '</div>';
+    }
+
+    sectionContent += `
+        </div>
+      </section>
+    `;
+
+    return sectionContent;
+  }
+
+  enhanceContentRelevance($, aiContent) {
+    // Substituir textos genéricos restantes por conteúdo mais específico
+    $('*').each((i, elem) => {
+      const $elem = $(elem);
+      let text = $elem.text();
+
+      if (text && !$elem.hasClass('gerai-preserve-brand')) {
+        // Substituir placeholders comuns
+        const replacements = {
+          'Lorem ipsum': aiContent.narrative?.hook || 'Conteúdo personalizado gerado por IA',
+          'Your Company': aiContent.config?.company || 'Sua Empresa',
+          'Company Name': aiContent.config?.company || 'Nome da Empresa',
+          'Title Here': aiContent.title || 'Título da Apresentação',
+          'Your Title': aiContent.title || 'Título Personalizado',
+          'Description here': aiContent.narrative?.keyMessage || 'Mensagem principal',
+          'Add your content': 'Conteúdo gerado especificamente para seu contexto'
+        };
+
+        Object.entries(replacements).forEach(([placeholder, replacement]) => {
+          if (text.includes(placeholder)) {
+            $elem.text(text.replace(new RegExp(placeholder, 'gi'), replacement));
+          }
+        });
+
+        // Substituir textos genéricos por contexto específico
+        if (text.match(/^(Description|Content|Text|Sample|Example)/i) && text.length < 50) {
+          const contextualContent = this.getContextualContent(aiContent, $elem.closest('[data-module]').attr('data-module'));
+          if (contextualContent) {
+            $elem.text(contextualContent);
+          }
+        }
+      }
+    });
+  }
+
+  getContextualContent(aiContent, moduleType) {
+    const contextMap = {
+      'capa': aiContent.narrative?.hook,
+      'agenda': 'Estrutura estratégica desta apresentação',
+      'problema': 'Análise da situação atual e desafios identificados',
+      'solucao': 'Estratégia personalizada para seus objetivos',
+      'cases': 'Exemplos de sucesso em contextos similares',
+      'metricas': 'Indicadores de performance e ROI esperado',
+      'conclusao': aiContent.narrative?.cta
+    };
+
+    return contextMap[moduleType] || null;
   }
 
   addMetricsVisualization($elem, metrics) {

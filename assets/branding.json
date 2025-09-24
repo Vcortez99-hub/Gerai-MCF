@@ -1,0 +1,31 @@
+{
+  "name": "Configuração de Marca Padrão",
+  "colors": {
+    "primary": "#007bff",
+    "secondary": "#6c757d",
+    "success": "#28a745",
+    "warning": "#ffc107",
+    "danger": "#dc3545"
+  },
+  "fonts": {
+    "primary": "Arial, sans-serif",
+    "secondary": "Georgia, serif",
+    "monospace": "Courier New, monospace"
+  },
+  "spacing": {
+    "small": "8px",
+    "medium": "16px",
+    "large": "24px",
+    "xlarge": "32px"
+  },
+  "logo": {
+    "primary": "/assets/brand/logo-primary.svg",
+    "secondary": "/assets/brand/logo-secondary.svg",
+    "icon": "/assets/brand/icon.svg"
+  },
+  "guidelines": {
+    "logoUsage": "Logo deve ter espaço mínimo de 2x sua altura",
+    "colorContrast": "Manter contraste mínimo de 4.5:1",
+    "typography": "Usar hierarquia clara com tamanhos consistentes"
+  }
+}

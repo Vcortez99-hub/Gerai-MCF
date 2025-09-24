@@ -46,12 +46,15 @@ class ClaudeAIService {
 
     const prompt = await this.buildPrompt(briefing, config);
 
+    // Adicionar o briefing ao config para o parsing
+    config.briefing = briefing;
+
     console.log('📝 Prompt length:', prompt.length, 'characters');
 
     const response = await this.anthropic.messages.create({
       model: this.model,
-      max_tokens: 8000, // Aumentado para permitir respostas mais completas
-      temperature: 0.3, // Reduzido para mais consistência
+      max_tokens: 8192, // Máximo permitido para Claude 3.5 Sonnet
+      temperature: 0.7, // Aumentado para mais criatividade e análise profunda
       messages: [
         {
           role: "user",
@@ -77,7 +80,7 @@ class ClaudeAIService {
           // Replace template variables
           promptTemplate = promptTemplate.replace(/\{\{company\}\}/g, config.company || 'Cliente');
           promptTemplate = promptTemplate.replace(/\{\{audience\}\}/g, config.audience || 'Executivos');
-          promptTemplate = promptTemplate.replace(/\{\{duration\}\}/g, config.duration || '15');
+          promptTemplate = promptTemplate.replace(/\{\{duration\}\}/g, '15');
           promptTemplate = promptTemplate.replace(/\{\{slideCount\}\}/g, config.slideCount || '6');
           promptTemplate = promptTemplate.replace(/\{\{tone\}\}/g, config.tone || 'profissional');
           promptTemplate = promptTemplate.replace(/\{\{briefing\}\}/g, briefing);
@@ -95,162 +98,562 @@ class ClaudeAIService {
   }
 
   buildDefaultPrompt(briefing, config) {
-    const { templateType, company, audience, duration, slideCount, tone } = config;
+    const { templateType, company, audience, slideCount, tone } = config;
 
-    return `Você é um especialista em criação de apresentações corporativas de alta qualidade, com capacidade de gerar conteúdo específico, detalhado e relevante. Analise o briefing fornecido e crie uma apresentação completa e profissional.
+    return `# Prompt do Sistema - Gerai-MCF Presentation Generator
 
-BRIEFING DO CLIENTE:
+Você é um especialista em criar apresentações HTML profissionais e completas. Sua função é gerar apresentações em formato de slides seguindo rigorosamente o template visual da Darede e retornando SEMPRE um HTML completo e funcional.
+
+## REGRA FUNDAMENTAL
+**SEMPRE retorne um documento HTML completo, válido e autossuficiente que funcione imediatamente quando aberto em um navegador.**
+
+## BRIEFING ESPECÍFICO DO CLIENTE:
 ${briefing}
 
-CONFIGURAÇÕES DA APRESENTAÇÃO:
+## CONFIGURAÇÕES:
 - Empresa: ${company || 'Cliente'}
 - Público-alvo: ${audience || 'Executivos'}
-- Duração: ${duration || '15'} minutos
-- Número de slides: ${slideCount || '6'}
+- Slides: ${slideCount || '7'}
 - Tom: ${tone || 'profissional'}
-- Tipo: ${templateType || 'comercial'}
 
-INSTRUÇÕES CRÍTICAS:
-1. ANALISE PROFUNDAMENTE o briefing - extraia insights específicos, dados relevantes e contexto
-2. GERE CONTEÚDO ÚNICO baseado no briefing real, não templates genéricos
-3. SEJA ESPECÍFICO - use dados, números, exemplos concretos quando possível
-4. ADAPTE a linguagem para o público-alvo e tom especificados
-5. CRIE uma narrativa coesa que conecte todos os slides
-6. INCLUA detalhes técnicos e comerciais relevantes
-7. SUGIRA elementos visuais específicos para cada slide
+## ESTRUTURA OBRIGATÓRIA DA RESPOSTA
 
-MÓDULOS OBRIGATÓRIOS (todos devem ser preenchidos):
-Gere TODOS os módulos com conteúdo rico e específico:
+Você deve SEMPRE retornar apenas o código HTML, sem explicações adicionais, no seguinte formato:
 
-1. CAPA - Título impactante e específico do briefing
-2. AGENDA - Estrutura clara baseada no conteúdo
-3. PROBLEMA/CONTEXTO - Desafio específico identificado no briefing
-4. SOLUÇÃO - Proposta detalhada e específica
-5. COMPARATIVO - Antes vs Depois ou análise competitiva
-6. CASES - Exemplos práticos relevantes
-7. MÉTRICAS - KPIs e resultados mensuráveis
-8. TIMELINE - Cronograma de implementação
-9. CONCLUSÃO - Próximos passos específicos
+\`\`\`html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[TÍTULO_APRESENTAÇÃO] | Darede</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* CSS COMPLETO AQUI */
+    </style>
+</head>
+<body>
+    <!-- SLIDES AQUI -->
+    <script>
+        // JAVASCRIPT COMPLETO AQUI
+    </script>
+</body>
+</html>
+\`\`\`
 
-FORMATO DE RESPOSTA (JSON válido e completo):
-{
-  "title": "Título específico baseado no briefing (não genérico)",
-  "slideCount": ${slideCount || 9},
-  "modules": {
-    "capa": {
-      "title": "Título da apresentação específico para o briefing",
-      "content": "Subtítulo que resume a proposta principal",
-      "subtitle": "Linha de apoio com empresa e data"
-    },
-    "agenda": {
-      "title": "Agenda da Apresentação",
-      "content": "Estrutura planejada para atingir os objetivos",
-      "bullets": ["Tópico específico 1", "Tópico específico 2", "Tópico específico 3", "Próximos passos"]
-    },
-    "problema": {
-      "title": "Desafio/Oportunidade Identificada",
-      "content": "Análise detalhada do contexto e problema específico do briefing",
-      "bullets": ["Ponto crítico 1 baseado no briefing", "Ponto crítico 2 específico", "Impacto nos resultados"],
-      "stats": "Estatística ou dado relevante do setor/problema"
-    },
-    "solucao": {
-      "title": "Nossa Proposta de Solução",
-      "content": "Descrição detalhada da solução específica para o problema identificado",
-      "bullets": ["Benefício específico 1", "Benefício específico 2", "Diferencial competitivo", "Valor agregado"]
-    },
-    "comparativo": {
-      "title": "Análise Comparativa",
-      "content": "Comparação entre situação atual e futura ou vs concorrência",
-      "bullets": ["Situação atual: problema específico", "Com nossa solução: melhoria específica", "Vantagem competitiva clara"]
-    },
-    "cases": {
-      "title": "Cases de Sucesso Relevantes",
-      "content": "Exemplos práticos de implementação similar",
-      "bullets": ["Case 1: empresa similar - resultado específico", "Case 2: mesmo setor - métrica concreta", "Case 3: implementação recente - ROI alcançado"]
-    },
-    "metricas": {
-      "title": "Resultados e Indicadores",
-      "content": "KPIs mensuráveis e específicos esperados",
-      "metrics": [
-        {"label": "Métrica principal", "value": "Valor específico", "description": "Explicação do impacto"},
-        {"label": "ROI", "value": "Porcentagem realista", "description": "Retorno sobre investimento"},
-        {"label": "Eficiência", "value": "Melhoria específica", "description": "Ganho operacional"},
-        {"label": "Satisfação", "value": "Meta específica", "description": "Indicador de qualidade"}
-      ]
-    },
-    "timeline": {
-      "title": "Cronograma de Implementação",
-      "content": "Planejamento detalhado das etapas",
-      "bullets": ["Fase 1: Análise e planejamento (prazo específico)", "Fase 2: Implementação piloto (prazo específico)", "Fase 3: Rollout completo (prazo específico)", "Fase 4: Monitoramento e otimização"]
-    },
-    "conclusao": {
-      "title": "Próximos Passos",
-      "content": "Resumo dos benefícios e ações específicas",
-      "bullets": ["Aprovação da proposta específica", "Definição de cronograma detalhado", "Início da implementação", "Acompanhamento de resultados"]
-    }
-  },
-  "suggestedAssets": {
-    "colorPalette": ["#2563eb", "#059669", "#dc2626"],
-    "icons": ["analytics", "growth", "solution", "success"],
-    "imageSearch": ["business transformation", "digital innovation", "team collaboration"]
-  },
-  "narrative": {
-    "hook": "Frase de abertura específica e impactante baseada no briefing",
-    "cta": "Call to action específico e actionable",
-    "keyMessage": "Mensagem principal que conecta problema, solução e resultados"
-  }
+## ESTRUTURA DOS SLIDES (MÍNIMO 7 SLIDES)
+
+### 1. Slide de Capa (OBRIGATÓRIO)
+\`\`\`html
+<div class="slide active">
+    <div class="slide-content cover-slide">
+        <img src="https://lps-geral.s3.us-east-1.amazonaws.com/agente-ia-empresas/assets/logo-darede-white.png" alt="Darede" class="logo-large">
+        <h1>[TÍTULO_PRINCIPAL]</h1>
+        <p class="subtitle">[SUBTÍTULO_DESCRITIVO]</p>
+        <div class="date-author">
+            <span>[DATA_ATUAL]</span>
+            <span>[DEPARTAMENTO/AUTOR]</span>
+        </div>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg" alt="AWS Partner" class="aws-badge">
+    </div>
+</div>
+\`\`\`
+
+### 2. Sumário Executivo (OBRIGATÓRIO)
+- 4 cards com métricas principais
+- Usar ícones Font Awesome apropriados
+- Incluir valores e tendências
+
+### 3. Contexto/Introdução (OBRIGATÓRIO)
+- Definição clara do tema
+- Objetivos da apresentação
+- Escopo abordado
+
+### 4-6. Slides de Conteúdo Principal (MÍNIMO 3)
+- Análises detalhadas com gráficos
+- Tabelas comparativas
+- Timeline/Roadmap
+- Insights e descobertas
+
+### 7. Próximos Passos (OBRIGATÓRIO)
+- Recomendações acionáveis
+- Cronograma proposto
+- Call-to-action final
+
+## CSS OBRIGATÓRIO (COPIAR INTEGRALMENTE)
+
+\`\`\`css
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-CRÍTICO: Responda APENAS com o JSON válido, sem formatação markdown. O JSON deve ser completo com TODOS os módulos preenchidos com conteúdo específico e relevante.`;
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: linear-gradient(135deg, #0A4F2C 0%, #11713F 50%, #1A8F4F 100%);
+    overflow: hidden;
+    color: #ffffff;
+}
+
+.slides-container {
+    display: flex;
+    transition: transform 0.5s ease;
+    width: 100vw;
+    height: 100vh;
+}
+
+.slide {
+    min-width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    position: relative;
+}
+
+.slide-content {
+    max-width: 1200px;
+    width: 100%;
+    animation: slideIn 0.8s ease;
+}
+
+.slide-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 40px;
+}
+
+.logo {
+    height: 40px;
+}
+
+.slide-number {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+}
+
+h1 {
+    font-size: 3.5rem;
+    font-weight: 800;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+h2 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 30px;
+}
+
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 24px;
+    margin-top: 40px;
+}
+
+.card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+    animation: fadeInUp 0.6s ease forwards;
+    animation-delay: calc(var(--index) * 0.1s);
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.metric-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #FFC107;
+}
+
+.chart-container {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 30px;
+    margin: 30px 0;
+}
+
+.data-table {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.data-table th {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+}
+
+.data-table td {
+    padding: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.badge-success {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22C55E;
+}
+
+.badge-warning {
+    background: rgba(251, 191, 36, 0.2);
+    color: #FBBF24;
+}
+
+.badge-danger {
+    background: rgba(239, 68, 68, 0.2);
+    color: #EF4444;
+}
+
+.navigation {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 20px;
+    z-index: 1000;
+}
+
+.nav-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: white;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.nav-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+.progress-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 4px;
+    background: #FFC107;
+    transition: width 0.5s ease;
+    z-index: 1001;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+\`\`\`
+
+## JAVASCRIPT OBRIGATÓRIO (COPIAR INTEGRALMENTE)
+
+\`\`\`javascript
+let currentSlide = 0;
+const slides = document.querySelectorAll('.slide');
+const totalSlides = slides.length;
+const slidesContainer = document.querySelector('.slides-container');
+const progressBar = document.querySelector('.progress-bar');
+
+function goToSlide(index) {
+    if (index >= 0 && index < totalSlides) {
+        currentSlide = index;
+        slidesContainer.style.transform = \`translateX(-\${currentSlide * 100}vw)\`;
+        updateProgress();
+        updateSlideNumbers();
+    }
+}
+
+function nextSlide() {
+    goToSlide(currentSlide + 1);
+}
+
+function prevSlide() {
+    goToSlide(currentSlide - 1);
+}
+
+function updateProgress() {
+    const progress = ((currentSlide + 1) / totalSlides) * 100;
+    progressBar.style.width = progress + '%';
+}
+
+function updateSlideNumbers() {
+    document.querySelectorAll('.slide-number').forEach(el => {
+        el.textContent = \`\${currentSlide + 1} / \${totalSlides}\`;
+    });
+}
+
+// Navegação por teclado
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') nextSlide();
+    if (e.key === 'ArrowLeft') prevSlide();
+    if (e.key === ' ') {
+        e.preventDefault();
+        nextSlide();
+    }
+});
+
+// Navegação por toque (mobile)
+let touchStartX = 0;
+document.addEventListener('touchstart', (e) => {
+    touchStartX = e.touches[0].clientX;
+});
+
+document.addEventListener('touchend', (e) => {
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = touchStartX - touchEndX;
+    if (Math.abs(diff) > 50) {
+        if (diff > 0) nextSlide();
+        else prevSlide();
+    }
+});
+
+// Inicialização
+document.addEventListener('DOMContentLoaded', () => {
+    updateProgress();
+    updateSlideNumbers();
+
+    // Inicializar gráficos
+    initCharts();
+});
+
+function initCharts() {
+    // Configuração dos gráficos Chart.js
+    Chart.defaults.color = '#ffffff';
+    Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+
+    // [ADICIONAR INICIALIZAÇÃO DOS GRÁFICOS ESPECÍFICOS AQUI]
+}
+\`\`\`
+
+## REGRAS DE GERAÇÃO DE CONTEÚDO
+
+### Quando receber TEMA GENÉRICO (ex: "transformação digital"):
+1. Pesquise dados reais e atualizados do setor
+2. Crie métricas realistas (crescimento de mercado, ROI esperado, etc.)
+3. Inclua tendências e projeções
+4. Adicione cases de sucesso genéricos
+5. Proponha um roadmap de implementação
+
+### Quando receber DADOS ESPECÍFICOS:
+1. Use TODOS os dados fornecidos
+2. Organize em visualizações apropriadas
+3. Adicione análises e insights
+4. Mantenha fidelidade aos números fornecidos
+5. Complemente com contexto de mercado
+
+## ÍCONES FONT AWESOME (NUNCA USE EMOJIS)
+
+### Por categoria de conteúdo:
+- **Tecnologia**: fa-microchip, fa-server, fa-cloud, fa-code
+- **Crescimento**: fa-chart-line, fa-rocket, fa-arrow-trend-up
+- **Financeiro**: fa-dollar-sign, fa-coins, fa-chart-pie
+- **Processos**: fa-cogs, fa-project-diagram, fa-sitemap
+- **Pessoas**: fa-users, fa-user-tie, fa-people-group
+- **Segurança**: fa-shield-halved, fa-lock, fa-fingerprint
+- **Inovação**: fa-lightbulb, fa-brain, fa-flask
+- **Performance**: fa-gauge-high, fa-trophy, fa-medal
+
+## VALIDAÇÃO ANTES DE RETORNAR
+
+Confirme que o HTML contém:
+- [ ] DOCTYPE e estrutura HTML5 válida
+- [ ] Meta tags de viewport para responsividade
+- [ ] Link para Font Awesome 6.4.0
+- [ ] Script do Chart.js
+- [ ] Mínimo de 7 slides completos
+- [ ] Logo da Darede em todos os slides necessários
+- [ ] Navegação funcional (botões e teclado)
+- [ ] Barra de progresso
+- [ ] Pelo menos 2 gráficos diferentes
+- [ ] Todos os estilos CSS inline
+- [ ] JavaScript completo e funcional
+- [ ] Dados coerentes e realistas
+
+## FORMATO DA RESPOSTA
+
+**IMPORTANTE**: Retorne APENAS o código HTML completo, sem explicações, comentários ou texto adicional. O HTML deve estar pronto para ser salvo como arquivo .html e aberto diretamente no navegador.
+
+**SEM NENHUM TEXTO ANTES OU DEPOIS DO HTML**`;
   }
 
   parseAIResponse(response, config) {
     try {
-      console.log('🔍 Raw AI Response:', response.substring(0, 500) + '...');
+      console.log('🔍 Raw AI Response length:', response.length);
 
-      // Limpeza mais robusta da resposta
-      let cleanResponse = response
-        .replace(/```json\n?|```\n?/g, '')
-        .replace(/^[^{]*/, '') // Remove texto antes do primeiro {
-        .replace(/[^}]*$/, '') // Remove texto depois do último }
+      // Limpar a resposta HTML - remover markdown se houver
+      let cleanHTML = response
+        .replace(/```html\n?|```\n?/g, '')
         .trim();
 
-      // Se não encontrou JSON válido, tentar extrair de outra forma
-      if (!cleanResponse.startsWith('{')) {
-        const jsonMatch = response.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          cleanResponse = jsonMatch[0];
+      // Verificar se é HTML válido
+      if (!cleanHTML.startsWith('<!DOCTYPE html>') && !cleanHTML.startsWith('<html')) {
+        // Tentar extrair HTML de dentro da resposta
+        const htmlMatch = response.match(/<!DOCTYPE html>[\s\S]*<\/html>/i);
+        if (htmlMatch) {
+          cleanHTML = htmlMatch[0];
+        } else {
+          throw new Error('HTML não encontrado na resposta');
         }
       }
 
-      console.log('🧹 Cleaned Response:', cleanResponse.substring(0, 200) + '...');
-
-      const parsed = JSON.parse(cleanResponse);
-
-      // Validar se tem a estrutura mínima necessária
-      if (!parsed.modules || Object.keys(parsed.modules).length === 0) {
-        throw new Error('Resposta AI não contém módulos válidos');
+      // Validar estrutura HTML básica
+      if (!cleanHTML.includes('<html') || !cleanHTML.includes('</html>')) {
+        throw new Error('Estrutura HTML inválida');
       }
 
+      console.log('✅ HTML válido recebido, tamanho:', cleanHTML.length);
+
+      // Retornar o HTML diretamente com metadata
       const result = {
-        ...parsed,
+        html: cleanHTML,
+        title: this.extractTitleFromHTML(cleanHTML),
         generatedAt: new Date().toISOString(),
         config,
         provider: this.provider,
-        model: this.model
+        model: this.model,
+        type: 'complete-html'
       };
 
-      console.log('✅ AI Response parsed successfully with', Object.keys(result.modules).length, 'modules');
       return result;
 
     } catch (error) {
-      console.error('❌ Erro ao parsear resposta do Claude:', error.message);
-      console.log('📄 Original response:', response);
+      console.error('❌ Erro ao parsear resposta HTML do Claude:', error.message);
+      console.log('📄 Original response preview:', response.substring(0, 500) + '...');
 
-      // Fallback mais inteligente
-      console.log('🔄 Usando geração fallback melhorada...');
-      return this.generateEnhancedFallback(config.aiPrompt || '', config);
+      // Fallback para geração HTML simples
+      console.log('🔄 Usando fallback HTML...');
+      return this.generateHTMLFallback(config);
     }
+  }
+
+  extractTitleFromHTML(html) {
+    try {
+      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      return titleMatch ? titleMatch[1] : 'Apresentação Gerada';
+    } catch {
+      return 'Apresentação Gerada';
+    }
+  }
+
+  generateHTMLFallback(config) {
+    const { company, audience, briefing } = config;
+    const title = `Apresentação - ${company || 'Cliente'}`;
+
+    const fallbackHTML = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${title} | Darede</title>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0A4F2C 0%, #11713F 50%, #1A8F4F 100%);
+            color: #ffffff;
+            margin: 0;
+            padding: 40px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            max-width: 1200px;
+            text-align: center;
+        }
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .content {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 40px;
+            margin-top: 30px;
+        }
+        .logo {
+            height: 60px;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="https://lps-geral.s3.us-east-1.amazonaws.com/agente-ia-empresas/assets/logo-darede-white.png" alt="Darede" class="logo">
+        <h1>${title}</h1>
+        <div class="content">
+            <h2>Apresentação em Desenvolvimento</h2>
+            <p>Esta é uma apresentação personalizada baseada no briefing fornecido.</p>
+            <p><strong>Empresa:</strong> ${company || 'Cliente'}</p>
+            <p><strong>Público:</strong> ${audience || 'Executivos'}</p>
+            ${briefing ? `<p><strong>Briefing:</strong> ${briefing.substring(0, 200)}...</p>` : ''}
+        </div>
+    </div>
+</body>
+</html>`;
+
+    return {
+      html: fallbackHTML,
+      title,
+      generatedAt: new Date().toISOString(),
+      config,
+      provider: 'fallback',
+      type: 'complete-html'
+    };
   }
 
   generateEnhancedFallback(briefing, config) {
@@ -391,8 +794,17 @@ CRÍTICO: Responda APENAS com o JSON válido, sem formatação markdown. O JSON 
       selectedModules[key] = allModules[key];
     });
 
+    // Para compatibilidade, retornar formato de HTML gerado
+    const fallbackHTML = this.generateHTMLFallback({
+      company: config.company,
+      audience: config.audience,
+      briefing: briefing
+    });
+
     return {
-      title,
+      title: fallbackHTML.title,
+      html: fallbackHTML.html,
+      type: 'complete-html',
       slideCount,
       modules: selectedModules,
       suggestedAssets: {

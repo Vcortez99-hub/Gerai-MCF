@@ -32,23 +32,8 @@ class PresentationGenerator {
     }
 
     async loadTemplates() {
-        try {
-            const response = await fetch('/api/templates');
-            const data = await response.json();
-
-            if (data.success) {
-                this.renderTemplates(data.templates);
-                this.renderTemplatesGrid(data.templates);
-                console.log(`📋 Carregados ${data.templates.length} templates`);
-            } else {
-                console.error('Erro ao carregar templates:', data.error);
-                this.showError('Erro ao carregar templates. Verifique se o servidor está funcionando.');
-            }
-        } catch (error) {
-            console.error('Erro na requisição de templates:', error);
-            // Remove a mensagem de erro genérica para evitar confusão
-            console.warn('Templates não puderam ser carregados, verifique o servidor.');
-        }
+        // Template loading não é mais necessário - IA gera HTML completo
+        console.log('🎨 Sistema configurado para geração automática de design');
     }
 
     async loadAvailablePrompts() {
@@ -312,10 +297,9 @@ class PresentationGenerator {
             isValid = false;
         }
 
-        if (!this.currentTemplateId) {
-            this.showError('Selecione um template para continuar. Envie um template HTML primeiro se necessário.');
-            isValid = false;
-        }
+        // Template não é mais obrigatório - IA gera HTML completo
+        // Automaticamente usar um templateId padrão para compatibilidade
+        this.currentTemplateId = 'ai-generated-template';
 
         return isValid;
     }
@@ -327,7 +311,6 @@ class PresentationGenerator {
             config: {
                 company: document.getElementById('companyName').value.trim(),
                 audience: document.getElementById('audience').value,
-                duration: document.getElementById('duration').value,
                 slideCount: document.getElementById('slideCount').value,
                 tone: document.getElementById('tone').value,
                 templateType: 'corporativa',
@@ -512,7 +495,7 @@ class PresentationGenerator {
                 progressBar.style.width = `${Math.min(progress, 90)}%`;
             }, 100);
 
-            const response = await fetch('/api/upload-template', {
+            const response = await fetch('/api/templates/upload', {
                 method: 'POST',
                 body: formData
             });
@@ -714,6 +697,16 @@ function setupDragAndDrop() {
     uploadZone.addEventListener('click', () => {
         document.getElementById('templateUpload').click();
     });
+
+    // Handle file input change
+    const fileInput = document.getElementById('templateUpload');
+    if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) {
+                handleFileSelection(e.target.files[0]);
+            }
+        });
+    }
 }
 
 function preventDefaults(e) {
@@ -832,3 +825,352 @@ function formatFileSize(bytes) {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
+
+// ===== PRESENTATION HISTORY FUNCTIONS =====
+
+let currentHistoryPage = 1;
+let historyData = null;
+
+// Load presentation history
+async function loadHistory(page = 1, search = '', status = '') {
+    if (!window.presentationGenerator) {
+        console.error('PresentationGenerator not initialized');
+        return;
+    }
+
+    if (!window.presentationGenerator.currentUser) {
+        console.warn('User not authenticated for history');
+        return;
+    }
+
+    try {
+        const params = new URLSearchParams({
+            page: page.toString(),
+            limit: '12'
+        });
+
+        if (search) params.append('search', search);
+        if (status) params.append('status', status);
+
+        const response = await fetch(`/api/history?${params}`, {
+            headers: {
+                'Authorization': `Bearer ${window.presentationGenerator.currentUser.access_token}`
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            historyData = result.data;
+            currentHistoryPage = page;
+            renderHistoryList(result.data.presentations);
+            renderHistoryPagination(result.data.pagination);
+        } else {
+            throw new Error(result.error || 'Erro ao carregar histórico');
+        }
+    } catch (error) {
+        console.error('Error loading history:', error);
+        showHistoryError('Erro ao carregar histórico: ' + error.message);
+    }
+}
+
+// Render history list
+function renderHistoryList(presentations) {
+    const container = document.getElementById('historyContainer');
+
+    if (!presentations || presentations.length === 0) {
+        container.innerHTML = `
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">Nenhuma apresentação encontrada</h4>
+                <p class="text-muted">Gere sua primeira apresentação para vê-la aqui!</p>
+                <a href="#gerador" class="btn btn-primary">
+                    <i class="fas fa-magic"></i>
+                    Gerar Apresentação
+                </a>
+            </div>
+        `;
+        return;
+    }
+
+    const html = presentations.map(presentation => `
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <small class="opacity-75">
+                        <i class="fas fa-calendar"></i>
+                        ${formatDate(presentation.created_at)}
+                    </small>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="${presentation.generated_file_url}" target="_blank">
+                                <i class="fas fa-external-link-alt me-2"></i>Abrir
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="editPresentationTitle('${presentation.id}', '${presentation.title.replace(/'/g, "\\'")}')">
+                                <i class="fas fa-edit me-2"></i>Renomear
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" onclick="deletePresentation('${presentation.id}')">
+                                <i class="fas fa-trash me-2"></i>Deletar
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h6 class="card-title text-primary fw-bold">${presentation.title}</h6>
+                    <p class="card-text text-muted small mb-2">
+                        <strong>Template:</strong> ${presentation.template_name || presentation.template_id}
+                    </p>
+                    <p class="card-text small text-truncate" style="max-height: 3em; overflow: hidden;">
+                        ${presentation.briefing}
+                    </p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge ${presentation.status === 'completed' ? 'bg-success' : 'bg-warning'}">
+                                ${presentation.status === 'completed' ? 'Concluída' : 'Com erro'}
+                            </span>
+                        </div>
+                        <div class="text-muted small">
+                            ${presentation.generation_time_ms ? `${Math.round(presentation.generation_time_ms / 1000)}s` : ''}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <a href="${presentation.generated_file_url}" target="_blank" class="btn btn-primary btn-sm w-100">
+                        <i class="fas fa-eye"></i>
+                        Visualizar Apresentação
+                    </a>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    container.innerHTML = html;
+}
+
+// Render pagination
+function renderHistoryPagination(pagination) {
+    const container = document.getElementById('historyPagination');
+
+    if (pagination.totalPages <= 1) {
+        container.style.display = 'none';
+        return;
+    }
+
+    container.style.display = 'block';
+    const ul = container.querySelector('.pagination');
+
+    let html = '';
+
+    // Previous button
+    if (pagination.page > 1) {
+        html += `<li class="page-item">
+            <a class="page-link" href="#" onclick="loadHistory(${pagination.page - 1})">Anterior</a>
+        </li>`;
+    }
+
+    // Page numbers
+    for (let i = Math.max(1, pagination.page - 2); i <= Math.min(pagination.totalPages, pagination.page + 2); i++) {
+        html += `<li class="page-item ${i === pagination.page ? 'active' : ''}">
+            <a class="page-link" href="#" onclick="loadHistory(${i})">${i}</a>
+        </li>`;
+    }
+
+    // Next button
+    if (pagination.page < pagination.totalPages) {
+        html += `<li class="page-item">
+            <a class="page-link" href="#" onclick="loadHistory(${pagination.page + 1})">Próximo</a>
+        </li>`;
+    }
+
+    ul.innerHTML = html;
+}
+
+// Show history error
+function showHistoryError(message) {
+    const container = document.getElementById('historyContainer');
+    container.innerHTML = `
+        <div class="col-12 text-center py-5">
+            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+            <h4 class="text-warning">Erro</h4>
+            <p class="text-muted">${message}</p>
+            <button class="btn btn-primary" onclick="loadHistory()">
+                <i class="fas fa-refresh"></i>
+                Tentar Novamente
+            </button>
+        </div>
+    `;
+}
+
+// Edit presentation title
+async function editPresentationTitle(presentationId, currentTitle) {
+    const newTitle = prompt('Novo título da apresentação:', currentTitle);
+
+    if (!newTitle || newTitle.trim() === '' || newTitle === currentTitle) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/history/${presentationId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${window.presentationGenerator.currentUser.access_token}`
+            },
+            body: JSON.stringify({ title: newTitle.trim() })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Reload current page
+            loadHistory(currentHistoryPage,
+                document.getElementById('historySearch').value,
+                document.getElementById('historyFilter').value
+            );
+
+            window.presentationGenerator.showSuccess('Título atualizado com sucesso!');
+        } else {
+            throw new Error(result.error || 'Erro ao atualizar título');
+        }
+    } catch (error) {
+        console.error('Error updating title:', error);
+        window.presentationGenerator.showError('Erro ao atualizar título: ' + error.message);
+    }
+}
+
+// Delete presentation
+async function deletePresentation(presentationId) {
+    if (!confirm('Tem certeza que deseja deletar esta apresentação? Esta ação não pode ser desfeita.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/history/${presentationId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${window.presentationGenerator.currentUser.access_token}`
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Reload current page
+            loadHistory(currentHistoryPage,
+                document.getElementById('historySearch').value,
+                document.getElementById('historyFilter').value
+            );
+
+            window.presentationGenerator.showSuccess('Apresentação deletada com sucesso!');
+        } else {
+            throw new Error(result.error || 'Erro ao deletar apresentação');
+        }
+    } catch (error) {
+        console.error('Error deleting presentation:', error);
+        window.presentationGenerator.showError('Erro ao deletar apresentação: ' + error.message);
+    }
+}
+
+// Show user statistics
+async function showUserStats() {
+    if (!window.presentationGenerator.currentUser) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/history/stats/user', {
+            headers: {
+                'Authorization': `Bearer ${window.presentationGenerator.currentUser.access_token}`
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            const stats = result.data;
+            const avgTime = stats.avg_generation_time_ms ? Math.round(stats.avg_generation_time_ms / 1000) : 0;
+
+            alert(`📊 Suas Estatísticas:
+
+• Total de apresentações: ${stats.total_presentations}
+• Apresentações concluídas: ${stats.completed_presentations}
+• Apresentações com erro: ${stats.failed_presentations}
+• Tempo médio de geração: ${avgTime}s
+• Primeira apresentação: ${stats.first_presentation ? formatDate(stats.first_presentation) : 'N/A'}
+• Última apresentação: ${stats.last_presentation ? formatDate(stats.last_presentation) : 'N/A'}`);
+        } else {
+            throw new Error(result.error || 'Erro ao carregar estatísticas');
+        }
+    } catch (error) {
+        console.error('Error loading stats:', error);
+        window.presentationGenerator.showError('Erro ao carregar estatísticas: ' + error.message);
+    }
+}
+
+// Format date for display
+function formatDate(dateString) {
+    return new Date(dateString).toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+// Setup history search and filter handlers
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('historySearch');
+    const filterSelect = document.getElementById('historyFilter');
+
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                loadHistory(1, this.value, filterSelect.value);
+            }, 500);
+        });
+    }
+
+    if (filterSelect) {
+        filterSelect.addEventListener('change', function() {
+            loadHistory(1, searchInput.value, this.value);
+        });
+    }
+
+    // Auto-load history when section becomes visible
+    const historySection = document.getElementById('historico');
+    if (historySection) {
+        // Use MutationObserver to detect when section becomes visible
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                    const section = mutation.target;
+                    if (section.style.display !== 'none' && window.presentationGenerator?.currentUser) {
+                        console.log('📋 Histórico section became visible, loading history...');
+                        loadHistory();
+                        observer.disconnect(); // Stop observing after first load
+                    }
+                }
+            });
+        });
+
+        observer.observe(historySection, {
+            attributes: true,
+            attributeFilter: ['style']
+        });
+    }
+
+    // Also add hash change listener for direct navigation
+    window.addEventListener('hashchange', function() {
+        if (window.location.hash === '#historico' && window.presentationGenerator?.currentUser) {
+            console.log('📋 Navigated to history section, loading history...');
+            setTimeout(() => loadHistory(), 100); // Small delay to ensure section is visible
+        }
+    });
+});
