@@ -186,12 +186,14 @@ class PresentationGenerator {
     }
 
     setupFormValidation() {
-        const requiredFields = ['companyName', 'briefing'];
+        const requiredFields = ['briefing'];
 
         requiredFields.forEach(fieldId => {
             const field = document.getElementById(fieldId);
-            field.addEventListener('blur', () => this.validateField(field));
-            field.addEventListener('input', () => this.clearFieldError(field));
+            if (field) {
+                field.addEventListener('blur', () => this.validateField(field));
+                field.addEventListener('input', () => this.clearFieldError(field));
+            }
         });
     }
 
@@ -258,6 +260,12 @@ class PresentationGenerator {
 
         const formData = this.getFormData();
 
+        // Scroll para a seção de loading
+        document.getElementById('loadingSection').scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
+
         this.showLoading();
 
         try {
@@ -279,15 +287,9 @@ class PresentationGenerator {
     }
 
     validateForm() {
-        const companyName = document.getElementById('companyName').value.trim();
         const briefing = document.getElementById('briefing').value.trim();
 
         let isValid = true;
-
-        if (!companyName) {
-            this.showFieldError(document.getElementById('companyName'), 'Nome da empresa é obrigatório');
-            isValid = false;
-        }
 
         if (!briefing) {
             this.showFieldError(document.getElementById('briefing'), 'Briefing é obrigatório');
@@ -305,17 +307,48 @@ class PresentationGenerator {
     }
 
     getFormData() {
+        // Coletar tópicos dos slides
+        const slideTopics = [];
+        const topicInputs = document.querySelectorAll('[data-slide-topic]');
+        topicInputs.forEach(input => {
+            slideTopics.push({
+                slideNumber: input.dataset.slideNumber,
+                topic: input.value.trim() || `Slide ${input.dataset.slideNumber}`
+            });
+        });
+
+        // Coletar anexos
+        const attachments = [];
+        const attachmentItems = document.querySelectorAll('[data-attachment-id]');
+        attachmentItems.forEach(item => {
+            attachments.push({
+                id: item.dataset.attachmentId,
+                name: item.dataset.fileName,
+                type: item.dataset.fileType,
+                url: item.dataset.fileUrl
+            });
+        });
+
+        // Coletar URLs de logos
+        const logoUrls = [];
+        const logoInputs = document.querySelectorAll('[name="logoUrl"]');
+        logoInputs.forEach(input => {
+            if (input.value.trim()) {
+                logoUrls.push(input.value.trim());
+            }
+        });
+
         return {
             templateId: this.currentTemplateId,
             briefing: document.getElementById('briefing').value.trim(),
             config: {
-                company: document.getElementById('companyName').value.trim(),
                 audience: document.getElementById('audience').value,
                 slideCount: document.getElementById('slideCount').value,
-                tone: document.getElementById('tone').value,
-                templateType: 'corporativa',
-                promptType: document.getElementById('promptType').value
-            }
+                templateType: 'corporativa'
+            },
+            slideTopics: slideTopics,
+            attachments: attachments,
+            logoUrls: logoUrls
         };
     }
 
@@ -332,7 +365,11 @@ class PresentationGenerator {
     }
 
     showLoading() {
-        document.getElementById('presentationForm').style.display = 'none';
+        // Esconder o formulário mas manter visível na página
+        document.getElementById('presentationForm').style.opacity = '0.3';
+        document.getElementById('presentationForm').style.pointerEvents = 'none';
+
+        // Mostrar apenas o spinner de carregamento no topo
         document.getElementById('loadingSection').style.display = 'block';
         document.getElementById('resultSection').style.display = 'none';
 
@@ -341,7 +378,10 @@ class PresentationGenerator {
 
     hideLoading() {
         document.getElementById('loadingSection').style.display = 'none';
-        document.getElementById('presentationForm').style.display = 'block';
+
+        // Restaurar formulário
+        document.getElementById('presentationForm').style.opacity = '1';
+        document.getElementById('presentationForm').style.pointerEvents = 'auto';
     }
 
     animateProgress() {
@@ -624,6 +664,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setupCharacterCounter();
     setupScrollAnimations();
     setupFormEnhancements();
+    setupAttachmentDragDrop();
+
+    // Gerar campos iniciais de tópicos
+    generateTopicFields();
 });
 
 // Smooth scrolling para links de navegação
@@ -640,6 +684,147 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     });
 });
 
+// === NOVAS FUNCIONALIDADES ===
+
+// Gerar campos de tópicos baseado no número de slides
+function generateTopicFields() {
+    const slideCount = parseInt(document.getElementById('slideCount').value);
+    const container = document.getElementById('topicFieldsContainer');
+
+    let html = '<div class="row">';
+
+    for (let i = 1; i <= slideCount; i++) {
+        html += `
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold">Slide ${i}</label>
+                <input type="text"
+                       class="form-control"
+                       data-slide-topic
+                       data-slide-number="${i}"
+                       placeholder="Ex: Introdução, Problema, Solução, Benefícios..."
+                       style="border-left: 4px solid var(--primary-color);">
+                <small class="text-muted">Tópico/assunto principal do slide ${i}</small>
+            </div>
+        `;
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// Adicionar campo de URL de logo
+function addLogoUrlField() {
+    const container = document.getElementById('logoUrlsContainer');
+    const newField = document.createElement('div');
+    newField.className = 'input-group mb-2';
+    newField.innerHTML = `
+        <input type="url" class="form-control" placeholder="https://exemplo.com/logo.png" name="logoUrl">
+        <button class="btn btn-outline-danger" type="button" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    container.insertBefore(newField, container.lastElementChild);
+}
+
+// Manipular upload de anexos
+let attachmentCounter = 0;
+function handleAttachmentUpload(input) {
+    const files = input.files;
+    if (!files || files.length === 0) return;
+
+    const listContainer = document.getElementById('attachmentList');
+
+    Array.from(files).forEach(file => {
+        if (file.size > 10 * 1024 * 1024) { // 10MB limit
+            window.presentationGenerator.showError(`Arquivo ${file.name} muito grande (máximo 10MB)`);
+            return;
+        }
+
+        attachmentCounter++;
+        const attachmentId = `attachment_${attachmentCounter}`;
+
+        // Criar elemento de preview
+        const attachmentItem = document.createElement('div');
+        attachmentItem.className = 'alert alert-info d-flex align-items-center justify-content-between';
+        attachmentItem.setAttribute('data-attachment-id', attachmentId);
+        attachmentItem.setAttribute('data-file-name', file.name);
+        attachmentItem.setAttribute('data-file-type', file.type);
+        attachmentItem.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas ${
+                    file.type.includes('image') ? 'fa-image' :
+                    file.type.includes('csv') || file.name.endsWith('.csv') ? 'fa-table' :
+                    file.type.includes('excel') || file.name.endsWith('.xlsx') ? 'fa-file-excel' :
+                    'fa-file'
+                } text-primary me-2"></i>
+                <div>
+                    <strong>${file.name}</strong><br>
+                    <small class="text-muted">${formatFileSize(file.size)}</small>
+                </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeAttachment('${attachmentId}')">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+
+        listContainer.appendChild(attachmentItem);
+
+        // Para arquivos de imagem, criar preview
+        if (file.type.includes('image')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                attachmentItem.setAttribute('data-file-url', e.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+}
+
+// Remover anexo
+function removeAttachment(attachmentId) {
+    const element = document.querySelector(`[data-attachment-id="${attachmentId}"]`);
+    if (element) {
+        element.remove();
+    }
+}
+
+// Setup drag and drop para anexos
+function setupAttachmentDragDrop() {
+    const uploadZone = document.getElementById('attachmentUpload');
+    if (!uploadZone) return;
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        uploadZone.addEventListener(eventName, () => {
+            uploadZone.style.borderColor = 'var(--success-color)';
+            uploadZone.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
+        });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        uploadZone.addEventListener(eventName, () => {
+            uploadZone.style.borderColor = 'var(--border-light)';
+            uploadZone.style.backgroundColor = 'rgba(79, 70, 229, 0.02)';
+        });
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const input = document.getElementById('attachmentInput');
+            input.files = files;
+            handleAttachmentUpload(input);
+        }
+    });
+
+    uploadZone.addEventListener('click', () => {
+        document.getElementById('attachmentInput').click();
+    });
+}
+
 // Funções globais para compatibilidade
 function openPresentation() {
     window.presentationGenerator.openPresentation();
@@ -655,6 +840,23 @@ function downloadPresentation() {
 
 function copyPresentationLink() {
     window.presentationGenerator.copyPresentationLink();
+}
+
+function editPresentation() {
+    if (window.presentationGenerator.generatedFileName) {
+        // Salvar dados da apresentação para o editor
+        const presentationData = {
+            fileName: window.presentationGenerator.generatedFileName,
+            presentationId: window.presentationGenerator.generatedPresentationId
+        };
+
+        localStorage.setItem('lastGeneratedPresentation', JSON.stringify(presentationData));
+
+        // Abrir editor
+        window.open(`editor.html?id=${window.presentationGenerator.generatedPresentationId}`, '_blank');
+    } else {
+        window.presentationGenerator.showError('Nenhuma apresentação para editar');
+    }
 }
 
 function uploadTemplate() {
@@ -838,7 +1040,7 @@ async function loadHistory(page = 1, search = '', status = '') {
         return;
     }
 
-    if (!window.presentationGenerator.currentUser) {
+    if (!window.authToken) {
         console.warn('User not authenticated for history');
         return;
     }
@@ -854,7 +1056,8 @@ async function loadHistory(page = 1, search = '', status = '') {
 
         const response = await fetch(`/api/history?${params}`, {
             headers: {
-                'Authorization': `Bearer ${window.presentationGenerator.currentUser.access_token}`
+                'Authorization': `Bearer ${window.authToken}`,
+                'Content-Type': 'application/json'
             }
         });
 
@@ -1151,7 +1354,7 @@ document.addEventListener('DOMContentLoaded', function() {
             mutations.forEach(function(mutation) {
                 if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
                     const section = mutation.target;
-                    if (section.style.display !== 'none' && window.presentationGenerator?.currentUser) {
+                    if (section.style.display !== 'none' && window.authToken) {
                         console.log('📋 Histórico section became visible, loading history...');
                         loadHistory();
                         observer.disconnect(); // Stop observing after first load
@@ -1168,7 +1371,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Also add hash change listener for direct navigation
     window.addEventListener('hashchange', function() {
-        if (window.location.hash === '#historico' && window.presentationGenerator?.currentUser) {
+        if (window.location.hash === '#historico' && window.authToken) {
             console.log('📋 Navigated to history section, loading history...');
             setTimeout(() => loadHistory(), 100); // Small delay to ensure section is visible
         }

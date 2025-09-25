@@ -6,7 +6,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3005;
+const PORT = process.env.PORT || 3011;
 
 // Middleware
 app.use(cors());
@@ -313,7 +313,14 @@ app.post('/api/templates/upload', upload.single('template'), async (req, res) =>
 app.post('/api/generate', optionalAuth, async (req, res) => {
   const startTime = Date.now();
   try {
-    const { templateId, briefing, config = {} } = req.body;
+    const {
+      templateId,
+      briefing,
+      config = {},
+      slideTopics = [],
+      attachments = [],
+      logoUrls = []
+    } = req.body;
 
     // Validação de entrada
     if (!briefing) {
@@ -328,15 +335,49 @@ app.post('/api/generate', optionalAuth, async (req, res) => {
 
     console.log(`🚀 Iniciando geração de apresentação: ${finalTemplateId}`);
     console.log(`📝 Briefing: ${briefing.substring(0, 100)}...`);
+    console.log(`🎯 Tópicos por slide: ${slideTopics.length} configurados`);
+    console.log(`📎 Anexos: ${attachments.length} arquivos`);
+    console.log(`🏢 Logos: ${logoUrls.length} URLs`);
+
+    // Enriquecer briefing com informações adicionais
+    let enhancedBriefing = briefing;
+
+    // Adicionar tópicos dos slides ao briefing
+    if (slideTopics && slideTopics.length > 0) {
+      enhancedBriefing += '\n\n=== ESTRUTURA DESEJADA DOS SLIDES ===\n';
+      slideTopics.forEach(topic => {
+        enhancedBriefing += `Slide ${topic.slideNumber}: ${topic.topic}\n`;
+      });
+    }
+
+    // Adicionar informações sobre anexos
+    if (attachments && attachments.length > 0) {
+      enhancedBriefing += '\n\n=== ANEXOS DISPONÍVEIS ===\n';
+      attachments.forEach(attachment => {
+        enhancedBriefing += `- ${attachment.name} (${attachment.type})\n`;
+      });
+      enhancedBriefing += 'Nota: Considere estes arquivos ao gerar conteúdo relevante.\n';
+    }
+
+    // Adicionar URLs de logos
+    if (logoUrls && logoUrls.length > 0) {
+      enhancedBriefing += '\n\n=== LOGOS PARA INCLUIR ===\n';
+      logoUrls.forEach((url, index) => {
+        enhancedBriefing += `Logo ${index + 1}: ${url}\n`;
+      });
+      enhancedBriefing += 'Nota: Incluir estes logos na apresentação como parceiros/clientes.\n';
+    }
 
     // 1. Gerar conteúdo com IA (agora gera HTML completo)
-    const aiContent = await AIContentService.generateContent(briefing, {
+    const aiContent = await AIContentService.generateContent(enhancedBriefing, {
       slideCount: config.slideCount || 6,
-      tone: config.tone || 'profissional',
+      audience: config.audience || 'Executivos',
       includeImages: config.includeImages || false,
       company: config.company || '',
-      audience: config.audience || 'Executivos',
-      aiPrompt: briefing,
+      aiPrompt: enhancedBriefing,
+      slideTopics,
+      attachments,
+      logoUrls,
       ...config
     });
 
