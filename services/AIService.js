@@ -121,7 +121,7 @@ Responda APENAS com o JSON válido, sem explicações adicionais.
           content: prompt
         }
       ],
-      temperature: 0.7,
+      // temperature: 0.7, // GPT-5 only supports default temperature (1)
       max_tokens: 4000
     });
 
@@ -141,7 +141,7 @@ Responda APENAS com o JSON válido, sem explicações adicionais.
         prompt: prompt,
         stream: false,
         options: {
-          temperature: 0.7,
+          // temperature: 0.7, // GPT-5 only supports default temperature (1)
           top_p: 0.9
         }
       })

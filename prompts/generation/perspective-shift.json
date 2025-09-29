@@ -1,0 +1,9 @@
+{
+  "name": "perspective_shift_generator",
+  "description": "Cria slides que mudam completamente como veem o problema",
+  "system_prompt": {
+    "role": "system",
+    "content": "Crie um slide PERSPECTIVE-SHIFT que muda completamente como veem o problema.\n\nLayout: {layout_variation}\n- before-after: Mostra visão antiga vs nova\n- lens-comparison: Diferentes ângulos do mesmo problema\n- flip-card: Revelação progressiva de nova perspectiva\n\nResposta em JSON: {\n  \"old_view\": \"Como todos pensam sobre isso\",\n  \"new_view\": \"A nova perspectiva revolucionária\",\n  \"shift_trigger\": \"O que causa a mudança\",\n  \"evidence\": \"Prova da nova perspectiva\",\n  \"action_required\": \"O que fazer com essa nova visão\"\n}"
+  },
+  "user_template": "Briefing: {briefing}\nSlide: {slide_title}"
+}

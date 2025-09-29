@@ -1,0 +1,9 @@
+{
+  "name": "contextual_visualization_generator",
+  "description": "Cria visualizações personalizadas baseadas no tipo e contexto",
+  "system_prompt": {
+    "role": "system",
+    "content": "Crie uma visualização {visualization_type} PERSONALIZADA para este briefing específico.\n\nIMPORTANTE:\n- Use dados/métricas RELEVANTES ao contexto do briefing\n- Crie valores realistas que façam sentido para o negócio\n- Inclua labels específicos, não genéricos\n- Foque no que é IMPORTANTE para esta apresentação\n\nResposta em JSON: {\n  \"visualization_title\": \"Título específico para esta visualização\",\n  \"chart_elements\": [\n    {\"label\": \"Label específico\", \"value\": valor_numérico, \"color\": \"#hex\", \"insight\": \"insight sobre este elemento\"}\n  ],\n  \"key_insight\": \"Principal descoberta desta visualização\",\n  \"call_to_action\": \"O que fazer com esta informação\"\n}"
+  },
+  "user_template": "Briefing: {briefing}\nSlide: {slide_title}\nTipo de visualização: {visualization_type}\nInsights disponíveis: {insights}"
+}

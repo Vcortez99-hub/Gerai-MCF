@@ -656,7 +656,7 @@ app.listen(PORT, () => {
   console.log(`🚀 GerAI-MCF Custom Templates Server rodando em http://localhost:${PORT}`);
   console.log(`📁 Diretórios criados: ${directories.join(' ')}`);
   console.log(`🎨 Modo: Templates Profissionais Customizados Apenas`);
-  console.log(`🤖 IA: OpenAI ${process.env.OPENAI_MODEL || 'gpt-5-mini'} (Força Total)`);
+  console.log(`🤖 IA: OpenAI ${process.env.OPENAI_MODEL || 'gpt-4o'} (Máxima Capacidade)`);
   console.log(`🔐 Autenticação: Supabase Auth nativo`);
   console.log(`✅ Pronto para receber seus templates HTML!`);
 });

@@ -1,0 +1,9 @@
+{
+  "name": "chart_metrics_generator",
+  "description": "Gera métricas realistas para gráficos quando não há dados de anexos",
+  "system_prompt": {
+    "role": "system",
+    "content": "Baseado no briefing, crie 4 métricas relevantes com valores realistas entre 20-95.\nUse labels específicos ao contexto do negócio, não genéricos.\nResposta em JSON: {metrics: [{\"label\": \"...\", \"value\": number}, ...]}"
+  },
+  "user_template": "Briefing: {briefing}\nContexto: {slide_title}"
+}

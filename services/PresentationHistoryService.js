@@ -18,16 +18,16 @@ class PresentationHistoryService {
     try {
       // Check if table exists by trying to select from it
       const { data, error } = await this.supabase
-        .from('presentation_history')
+        .from('presentations')
         .select('id')
         .limit(1);
 
       if (error && error.code === '42P01') {
         // Table doesn't exist, create it
-        console.log('📋 Creating presentation_history table...');
+        console.log('📋 Creating presentations table...');
         await this.createTable();
       } else {
-        console.log('📋 presentation_history table exists');
+        console.log('📋 presentations table exists');
       }
     } catch (error) {
       console.error('Error checking/creating table:', error);
@@ -39,7 +39,7 @@ class PresentationHistoryService {
       // Use raw SQL to create table
       const { error } = await this.supabase.rpc('exec_sql', {
         sql: `
-          CREATE TABLE IF NOT EXISTS presentation_history (
+          CREATE TABLE IF NOT EXISTS presentations (
             id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
             user_id UUID NOT NULL,
             title VARCHAR(255) NOT NULL,
@@ -56,16 +56,16 @@ class PresentationHistoryService {
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
           );
 
-          CREATE INDEX IF NOT EXISTS idx_presentation_history_user_id
-            ON presentation_history(user_id);
-          CREATE INDEX IF NOT EXISTS idx_presentation_history_created_at
-            ON presentation_history(created_at DESC);
+          CREATE INDEX IF NOT EXISTS idx_presentations_user_id
+            ON presentations(user_id);
+          CREATE INDEX IF NOT EXISTS idx_presentations_created_at
+            ON presentations(created_at DESC);
 
-          ALTER TABLE presentation_history ENABLE ROW LEVEL SECURITY;
+          ALTER TABLE presentations ENABLE ROW LEVEL SECURITY;
 
-          DROP POLICY IF EXISTS "Users can view own presentations" ON presentation_history;
+          DROP POLICY IF EXISTS "Users can view own presentations" ON presentations;
           CREATE POLICY "Users can view own presentations"
-            ON presentation_history FOR ALL
+            ON presentations FOR ALL
             USING (user_id::text = auth.uid()::text);
         `
       });
@@ -75,7 +75,7 @@ class PresentationHistoryService {
         throw error;
       }
 
-      console.log('✅ presentation_history table created successfully');
+      console.log('✅ presentations table created successfully');
     } catch (error) {
       console.error('Failed to create table:', error);
       // If RPC doesn't exist, create table without RLS for now
@@ -86,11 +86,11 @@ class PresentationHistoryService {
 
   async createBasicTable() {
     // Create a basic table for testing
-    console.log('📋 Creating basic presentation_history table...');
+    console.log('📋 Creating basic presentations table...');
 
     // Try to insert a test record and let the error guide us
     const { error } = await this.supabase
-      .from('presentation_history')
+      .from('presentations')
       .insert([{
         user_id: 'test-user-id',
         title: 'Test Presentation',
@@ -102,7 +102,7 @@ class PresentationHistoryService {
 
     if (error) {
       console.log('📋 Table needs to be created manually in Supabase dashboard');
-      console.log('📋 Use the SQL from database/presentation_history_schema.sql');
+      console.log('📋 Use the SQL from database/presentations_schema.sql');
     }
   }
 
@@ -122,7 +122,7 @@ class PresentationHistoryService {
       } = presentationData;
 
       const { data, error } = await this.supabase
-        .from('presentation_history')
+        .from('presentations')
         .insert([{
           user_id: userId,
           title: title || 'Apresentação Sem Título',
@@ -164,7 +164,7 @@ class PresentationHistoryService {
       } = options;
 
       let query = this.supabase
-        .from('presentation_history')
+        .from('presentations')
         .select(`
           id,
           title,
@@ -223,7 +223,7 @@ class PresentationHistoryService {
   async getPresentation(userId, presentationId) {
     try {
       const { data, error } = await this.supabase
-        .from('presentation_history')
+        .from('presentations')
         .select('*')
         .eq('user_id', userId)
         .eq('id', presentationId)
@@ -248,7 +248,7 @@ class PresentationHistoryService {
   async updatePresentation(userId, presentationId, updates) {
     try {
       const { data, error } = await this.supabase
-        .from('presentation_history')
+        .from('presentations')
         .update(updates)
         .eq('user_id', userId)
         .eq('id', presentationId)
@@ -271,7 +271,7 @@ class PresentationHistoryService {
   async deletePresentation(userId, presentationId) {
     try {
       const { error } = await this.supabase
-        .from('presentation_history')
+        .from('presentations')
         .delete()
         .eq('user_id', userId)
         .eq('id', presentationId);
@@ -332,7 +332,7 @@ class PresentationHistoryService {
       } = presentationData;
 
       const { data, error } = await this.supabase
-        .from('presentation_history')
+        .from('presentations')
         .insert([{
           user_id: userId,
           title: title || 'Apresentação (Falha)',
@@ -362,7 +362,7 @@ class PresentationHistoryService {
   async getRecentPresentations(userId, limit = 5) {
     try {
       const { data, error } = await this.supabase
-        .from('presentation_history')
+        .from('presentations')
         .select(`
           id,
           title,

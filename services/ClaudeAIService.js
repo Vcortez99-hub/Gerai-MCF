@@ -54,7 +54,7 @@ class ClaudeAIService {
     const response = await this.anthropic.messages.create({
       model: this.model,
       max_tokens: 8192, // Máximo permitido para Claude 3.5 Sonnet
-      temperature: 0.7, // Aumentado para mais criatividade e análise profunda
+      // temperature: 0.7, // GPT-5 only supports default temperature (1)
       messages: [
         {
           role: "user",
@@ -148,7 +148,7 @@ Você deve SEMPRE retornar apenas o código HTML, sem explicações adicionais, 
 \`\`\`html
 <div class="slide active">
     <div class="slide-content cover-slide">
-        <img src="https://lps-geral.s3.us-east-1.amazonaws.com/agente-ia-empresas/assets/logo-darede-white.png" alt="Darede" class="logo-large">
+        <img src="https://i.ibb.co/QvP3HK6n/logo-darede.png" alt="Darede" class="logo-large">
         <h1>[TÍTULO_PRINCIPAL]</h1>
         <p class="subtitle">[SUBTÍTULO_DESCRITIVO]</p>
         <div class="date-author">
@@ -633,7 +633,7 @@ Confirme que o HTML contém:
 </head>
 <body>
     <div class="container">
-        <img src="https://lps-geral.s3.us-east-1.amazonaws.com/agente-ia-empresas/assets/logo-darede-white.png" alt="Darede" class="logo">
+        <img src="https://i.ibb.co/QvP3HK6n/logo-darede.png" alt="Darede" class="logo">
         <h1>${title}</h1>
         <div class="content">
             <h2>Apresentação em Desenvolvimento</h2>

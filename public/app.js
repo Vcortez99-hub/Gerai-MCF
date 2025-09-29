@@ -353,15 +353,61 @@ class PresentationGenerator {
     }
 
     async generatePresentation(formData) {
-        const response = await fetch('/api/generate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(formData)
+        console.log('🚀 Iniciando geração da apresentação...');
+        console.log('📊 Dados do formulário:', {
+            briefingLength: formData.briefing?.length || 0,
+            hasAttachments: formData.attachments?.length > 0,
+            attachmentCount: formData.attachments?.length || 0,
+            slideCount: formData.config?.slideCount,
+            templateId: formData.templateId
         });
 
-        return await response.json();
+        try {
+            const response = await fetch('/api/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+
+            console.log('📡 Resposta do servidor recebida:', response.status, response.statusText);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ Erro HTTP:', response.status, errorText);
+                throw new Error(`Erro ${response.status}: ${response.statusText}`);
+            }
+
+            const result = await response.json();
+
+            console.log('📄 Resultado da API:', {
+                success: result.success,
+                hasData: !!result.data,
+                title: result.data?.title,
+                htmlLength: result.data?.downloadUrl ? 'URL presente' : 'URL ausente',
+                consistencyScore: result.data?.consistencyScore,
+                qualityScore: result.data?.qualityScore
+            });
+
+            if (result.success && result.data) {
+                this.showNotification(`✅ Apresentação gerada com sucesso! Quality Score: ${result.data.qualityScore || 'N/A'}%`, 'success');
+            }
+
+            return result;
+
+        } catch (error) {
+            console.error('❌ Erro na geração da apresentação:', error);
+            console.error('❌ Stack trace:', error.stack);
+
+            this.showNotification(`❌ Erro na geração: ${error.message}`, 'danger');
+
+            return {
+                success: false,
+                error: error.message,
+                details: 'Verifique o console para mais detalhes'
+            };
+        }
     }
 
     showLoading() {
@@ -726,7 +772,7 @@ function addLogoUrlField() {
     container.insertBefore(newField, container.lastElementChild);
 }
 
-// Manipular upload de anexos
+// Manipular upload de anexos com validação aprimorada
 let attachmentCounter = 0;
 function handleAttachmentUpload(input) {
     const files = input.files;
@@ -735,48 +781,94 @@ function handleAttachmentUpload(input) {
     const listContainer = document.getElementById('attachmentList');
 
     Array.from(files).forEach(file => {
+        console.log(`📎 Processando anexo: ${file.name} (${file.type}, ${file.size} bytes)`);
+
+        // Validações de arquivo
         if (file.size > 10 * 1024 * 1024) { // 10MB limit
             window.presentationGenerator.showError(`Arquivo ${file.name} muito grande (máximo 10MB)`);
+            return;
+        }
+
+        // Validação de tipos suportados
+        const supportedTypes = [
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+            'application/vnd.ms-excel', // .xls
+            'text/csv', // .csv
+            'text/plain', // .txt
+            'application/pdf' // .pdf
+        ];
+
+        const supportedExtensions = ['.xlsx', '.xls', '.csv', '.txt', '.pdf'];
+        const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+
+        const isSupported = supportedTypes.includes(file.type) || supportedExtensions.includes(fileExtension);
+
+        if (!isSupported) {
+            window.presentationGenerator.showError(`Tipo de arquivo não suportado: ${file.name}. Use .xlsx, .xls, .csv, .txt ou .pdf`);
             return;
         }
 
         attachmentCounter++;
         const attachmentId = `attachment_${attachmentCounter}`;
 
+        // Determinar ícone e tipo baseado no arquivo
+        let iconClass = 'fa-file';
+        let typeDescription = 'Documento';
+
+        if (file.type.includes('excel') || fileExtension === '.xlsx' || fileExtension === '.xls') {
+            iconClass = 'fa-file-excel';
+            typeDescription = 'Planilha Excel - Será analisada matematicamente';
+        } else if (file.type.includes('csv') || fileExtension === '.csv') {
+            iconClass = 'fa-table';
+            typeDescription = 'Dados CSV - Será processado para insights';
+        } else if (file.type.includes('pdf') || fileExtension === '.pdf') {
+            iconClass = 'fa-file-pdf';
+            typeDescription = 'Documento PDF';
+        } else {
+            iconClass = 'fa-file-alt';
+            typeDescription = 'Documento de texto';
+        }
+
         // Criar elemento de preview
         const attachmentItem = document.createElement('div');
         attachmentItem.className = 'alert alert-info d-flex align-items-center justify-content-between';
         attachmentItem.setAttribute('data-attachment-id', attachmentId);
         attachmentItem.setAttribute('data-file-name', file.name);
-        attachmentItem.setAttribute('data-file-type', file.type);
+        attachmentItem.setAttribute('data-file-type', file.type || 'application/octet-stream');
         attachmentItem.innerHTML = `
             <div class="d-flex align-items-center">
-                <i class="fas ${
-                    file.type.includes('image') ? 'fa-image' :
-                    file.type.includes('csv') || file.name.endsWith('.csv') ? 'fa-table' :
-                    file.type.includes('excel') || file.name.endsWith('.xlsx') ? 'fa-file-excel' :
-                    'fa-file'
-                } text-primary me-2"></i>
+                <i class="fas ${iconClass} text-primary me-2" style="font-size: 1.5rem;"></i>
                 <div>
                     <strong>${file.name}</strong><br>
-                    <small class="text-muted">${formatFileSize(file.size)}</small>
+                    <small class="text-muted">${formatFileSize(file.size)} • ${typeDescription}</small>
                 </div>
             </div>
-            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeAttachment('${attachmentId}')">
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeAttachment('${attachmentId}')" title="Remover anexo">
                 <i class="fas fa-times"></i>
             </button>
         `;
 
         listContainer.appendChild(attachmentItem);
 
-        // Para arquivos de imagem, criar preview
-        if (file.type.includes('image')) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                attachmentItem.setAttribute('data-file-url', e.target.result);
-            };
-            reader.readAsDataURL(file);
-        }
+        // Processar arquivo para dados
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            attachmentItem.setAttribute('data-file-url', e.target.result);
+            console.log(`✅ Anexo ${file.name} processado e pronto para análise IA`);
+
+            // Para arquivos Excel, mostrar aviso de que será analisado
+            if (fileExtension === '.xlsx' || fileExtension === '.xls') {
+                window.presentationGenerator.showNotification(`📊 Excel detectado: ${file.name} será analisado matematicamente pela IA`, 'info');
+            }
+        };
+
+        reader.onerror = function(e) {
+            console.error(`❌ Erro ao processar ${file.name}:`, e);
+            window.presentationGenerator.showError(`Erro ao processar ${file.name}`);
+            attachmentItem.remove();
+        };
+
+        reader.readAsDataURL(file);
     });
 }
 

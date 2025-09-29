@@ -7,6 +7,7 @@ class PresentationEditor {
         this.historyIndex = -1;
         this.presentationId = null;
         this.isDragging = false;
+        this.wysiwygEditor = null;
         this.init();
     }
 
@@ -79,78 +80,391 @@ class PresentationEditor {
     loadHtmlIntoEditor(htmlContent) {
         // Carrega HTML externo diretamente no editor
         console.log('🎯 Carregando HTML externo no editor');
+        console.log('📄 Tamanho do HTML:', htmlContent.length);
 
-        // Cria um DOM temporário para processar o HTML
+        // Salva o HTML original completo para preservar estilo
+        this.originalHTML = htmlContent;
+
+        // Extrai apenas o conteúdo do body
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = htmlContent;
 
-        // Torna elementos editáveis
-        this.makeElementsEditable(tempDiv);
+        // Pega o conteúdo do body se existir, senão pega tudo
+        const bodyContent = tempDiv.querySelector('body') || tempDiv;
 
-        // Parse os slides processados
-        this.parseHtmlToSlides(tempDiv.innerHTML);
+        // Procura pelos slides com diferentes seletores possíveis
+        let slideElements = bodyContent.querySelectorAll('.slide');
+
+        // Se não encontrar slides com .slide, tenta outros seletores
+        if (slideElements.length === 0) {
+            slideElements = bodyContent.querySelectorAll('section');
+            console.log('🔍 Não encontrou .slide, tentando sections:', slideElements.length);
+        }
+
+        if (slideElements.length === 0) {
+            slideElements = bodyContent.querySelectorAll('[data-index]');
+            console.log('🔍 Tentando elementos com data-index:', slideElements.length);
+        }
+
+        if (slideElements.length > 0) {
+            console.log('✅ Encontrou', slideElements.length, 'slides');
+
+            // Converte slides para estrutura editável
+            this.slides = Array.from(slideElements).map((slide, index) => {
+                const dataIndex = slide.getAttribute('data-index') || index;
+                const title = slide.querySelector('h1, h2, h3, .title')?.textContent ||
+                             slide.getAttribute('data-title') ||
+                             slide.getAttribute('aria-label') ||
+                             `Slide ${parseInt(dataIndex) + 1}`;
+
+                console.log(`📝 Slide ${index}: ${title.substring(0, 50)}...`);
+
+                return {
+                    id: `slide-${dataIndex}`,
+                    title: title,
+                    content: slide.outerHTML,
+                    element: slide.cloneNode(true),
+                    dataIndex: parseInt(dataIndex) || index
+                };
+            });
+
+            // Ordena slides pelo data-index
+            this.slides.sort((a, b) => a.dataIndex - b.dataIndex);
+
+            // Torna elementos editáveis em cada slide
+            this.slides.forEach(slide => {
+                this.makeSlideEditable(slide.element);
+            });
+
+            console.log('✅ Slides processados e ordenados');
+        } else {
+            console.log('⚠️ Nenhum slide encontrado, usando fallback');
+            // Fallback: cria um slide com todo o conteúdo
+            this.slides = [{
+                id: 'slide-1',
+                title: 'Apresentação Completa',
+                content: bodyContent.innerHTML,
+                element: bodyContent.cloneNode(true),
+                dataIndex: 0
+            }];
+
+            this.makeSlideEditable(this.slides[0].element);
+        }
+
+        // Renderiza a interface
+        this.renderSlidesList();
+        this.selectSlide(0);
+
+        console.log('🎯 Editor carregado com', this.slides.length, 'slides');
     }
 
-    makeElementsEditable(container) {
-        // Torna títulos editáveis
-        container.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(el => {
-            el.contentEditable = true;
-            el.setAttribute('data-editable', 'true');
-            el.setAttribute('data-element-type', 'heading');
-            el.style.outline = '2px dashed transparent';
-            el.style.transition = 'outline 0.2s ease';
+    initWysiwygEditor() {
+        const editorContainer = document.getElementById('slideEditor');
+        if (!editorContainer) return;
 
-            // Hover effect
-            el.addEventListener('mouseenter', () => {
-                el.style.outline = '2px dashed rgba(11,107,74,0.5)';
-            });
-            el.addEventListener('mouseleave', () => {
-                if (!el.classList.contains('selected')) {
-                    el.style.outline = '2px dashed transparent';
+        // Criar toolbar
+        const toolbar = document.createElement('div');
+        toolbar.className = 'wysiwyg-toolbar';
+        toolbar.innerHTML = `
+            <div class="toolbar-section">
+                <button type="button" class="toolbar-btn" data-command="undo" title="Desfazer (Ctrl+Z)">
+                    <i class="fas fa-undo"></i>
+                </button>
+                <button type="button" class="toolbar-btn" data-command="redo" title="Refazer (Ctrl+Y)">
+                    <i class="fas fa-redo"></i>
+                </button>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <div class="toolbar-section">
+                <select class="toolbar-select" data-command="formatBlock" title="Formato">
+                    <option value="div">Parágrafo</option>
+                    <option value="h1">Título 1</option>
+                    <option value="h2">Título 2</option>
+                    <option value="h3">Título 3</option>
+                    <option value="h4">Título 4</option>
+                    <option value="h5">Título 5</option>
+                    <option value="h6">Título 6</option>
+                </select>
+
+                <select class="toolbar-select" data-command="fontSize" title="Tamanho">
+                    <option value="1">8pt</option>
+                    <option value="2">10pt</option>
+                    <option value="3">12pt</option>
+                    <option value="4" selected>14pt</option>
+                    <option value="5">18pt</option>
+                    <option value="6">24pt</option>
+                    <option value="7">36pt</option>
+                </select>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <div class="toolbar-section">
+                <button type="button" class="toolbar-btn" data-command="bold" title="Negrito (Ctrl+B)">
+                    <i class="fas fa-bold"></i>
+                </button>
+                <button type="button" class="toolbar-btn" data-command="italic" title="Itálico (Ctrl+I)">
+                    <i class="fas fa-italic"></i>
+                </button>
+                <button type="button" class="toolbar-btn" data-command="underline" title="Sublinhado (Ctrl+U)">
+                    <i class="fas fa-underline"></i>
+                </button>
+                <button type="button" class="toolbar-btn" data-command="strikeThrough" title="Tachado">
+                    <i class="fas fa-strikethrough"></i>
+                </button>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <div class="toolbar-section">
+                <input type="color" class="toolbar-color" data-command="foreColor" value="#000000" title="Cor do texto">
+                <input type="color" class="toolbar-color" data-command="hiliteColor" value="#ffff00" title="Cor de fundo">
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <div class="toolbar-section">
+                <button type="button" class="toolbar-btn" data-command="justifyLeft" title="Alinhar à esquerda">
+                    <i class="fas fa-align-left"></i>
+                </button>
+                <button type="button" class="toolbar-btn" data-command="justifyCenter" title="Centralizar">
+                    <i class="fas fa-align-center"></i>
+                </button>
+                <button type="button" class="toolbar-btn" data-command="justifyRight" title="Alinhar à direita">
+                    <i class="fas fa-align-right"></i>
+                </button>
+                <button type="button" class="toolbar-btn" data-command="justifyFull" title="Justificar">
+                    <i class="fas fa-align-justify"></i>
+                </button>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <div class="toolbar-section">
+                <button type="button" class="toolbar-btn" data-command="insertUnorderedList" title="Lista com marcadores">
+                    <i class="fas fa-list-ul"></i>
+                </button>
+                <button type="button" class="toolbar-btn" data-command="insertOrderedList" title="Lista numerada">
+                    <i class="fas fa-list-ol"></i>
+                </button>
+                <button type="button" class="toolbar-btn" data-command="outdent" title="Diminuir recuo">
+                    <i class="fas fa-outdent"></i>
+                </button>
+                <button type="button" class="toolbar-btn" data-command="indent" title="Aumentar recuo">
+                    <i class="fas fa-indent"></i>
+                </button>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <div class="toolbar-section">
+                <button type="button" class="toolbar-btn" data-command="createLink" title="Inserir link">
+                    <i class="fas fa-link"></i>
+                </button>
+                <button type="button" class="toolbar-btn" data-command="unlink" title="Remover link">
+                    <i class="fas fa-unlink"></i>
+                </button>
+                <button type="button" class="toolbar-btn" data-command="insertImage" title="Inserir imagem">
+                    <i class="fas fa-image"></i>
+                </button>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <div class="toolbar-section">
+                <button type="button" class="toolbar-btn" data-command="insertHorizontalRule" title="Inserir linha horizontal">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <button type="button" class="toolbar-btn" data-command="removeFormat" title="Remover formatação">
+                    <i class="fas fa-remove-format"></i>
+                </button>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <div class="toolbar-section">
+                <button type="button" class="toolbar-btn" data-command="viewSource" title="Ver código HTML">
+                    <i class="fas fa-code"></i>
+                </button>
+            </div>
+        `;
+
+        // Inserir toolbar antes do editor
+        editorContainer.parentNode.insertBefore(toolbar, editorContainer);
+
+        // Configurar eventos da toolbar
+        this.setupToolbarEvents(toolbar);
+
+        // Configurar editor
+        editorContainer.contentEditable = true;
+        editorContainer.className += ' wysiwyg-editor';
+
+        // Configurar eventos do editor
+        this.setupEditorEvents(editorContainer);
+    }
+
+    setupToolbarEvents(toolbar) {
+        // Botões de comando
+        toolbar.querySelectorAll('[data-command]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const command = btn.dataset.command;
+
+                if (command === 'createLink') {
+                    const url = prompt('Digite a URL do link:');
+                    if (url) {
+                        document.execCommand(command, false, url);
+                    }
+                } else if (command === 'insertImage') {
+                    const url = prompt('Digite a URL da imagem:');
+                    if (url) {
+                        document.execCommand(command, false, url);
+                    }
+                } else if (command === 'viewSource') {
+                    this.toggleSourceView();
+                } else if (btn.type === 'color') {
+                    document.execCommand(command, false, btn.value);
+                } else if (btn.tagName === 'SELECT') {
+                    document.execCommand(command, false, btn.value);
+                } else {
+                    document.execCommand(command, false, null);
                 }
+
+                this.updateToolbarState();
+                this.saveCurrentSlide();
             });
         });
 
-        // Torna parágrafos e textos editáveis
-        container.querySelectorAll('p, .subtitle, .muted, li, .big, .value, .label').forEach(el => {
-            el.contentEditable = true;
-            el.setAttribute('data-editable', 'true');
-            el.setAttribute('data-element-type', 'text');
-            el.style.outline = '2px dashed transparent';
-            el.style.transition = 'outline 0.2s ease';
-
-            // Hover effect
-            el.addEventListener('mouseenter', () => {
-                el.style.outline = '2px dashed rgba(212,175,55,0.5)';
-            });
-            el.addEventListener('mouseleave', () => {
-                if (!el.classList.contains('selected')) {
-                    el.style.outline = '2px dashed transparent';
-                }
+        // Cores
+        toolbar.querySelectorAll('input[type="color"]').forEach(input => {
+            input.addEventListener('change', (e) => {
+                document.execCommand(input.dataset.command, false, e.target.value);
+                this.saveCurrentSlide();
             });
         });
 
-        // Torna cards e containers draggable
-        container.querySelectorAll('.card, .col, .metric').forEach(el => {
-            el.draggable = true;
-            el.setAttribute('data-draggable', 'true');
-            el.setAttribute('data-element-type', 'container');
-            el.style.cursor = 'move';
-            el.style.outline = '1px dashed transparent';
-            el.style.transition = 'outline 0.2s ease, transform 0.2s ease';
-
-            // Hover effect
-            el.addEventListener('mouseenter', () => {
-                el.style.outline = '1px dashed rgba(255,255,255,0.3)';
-                el.style.transform = 'scale(1.02)';
-            });
-            el.addEventListener('mouseleave', () => {
-                if (!el.classList.contains('selected')) {
-                    el.style.outline = '1px dashed transparent';
-                    el.style.transform = 'scale(1)';
-                }
+        // Selects
+        toolbar.querySelectorAll('select').forEach(select => {
+            select.addEventListener('change', (e) => {
+                document.execCommand(select.dataset.command, false, e.target.value);
+                this.updateToolbarState();
+                this.saveCurrentSlide();
             });
         });
+    }
+
+    setupEditorEvents(editor) {
+        // Atualizar toolbar quando a seleção muda
+        editor.addEventListener('mouseup', () => this.updateToolbarState());
+        editor.addEventListener('keyup', () => this.updateToolbarState());
+
+        // Salvar quando o conteúdo muda
+        editor.addEventListener('input', () => {
+            this.saveCurrentSlide();
+        });
+
+        // Atalhos de teclado
+        editor.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key) {
+                    case 'b':
+                        e.preventDefault();
+                        document.execCommand('bold');
+                        break;
+                    case 'i':
+                        e.preventDefault();
+                        document.execCommand('italic');
+                        break;
+                    case 'u':
+                        e.preventDefault();
+                        document.execCommand('underline');
+                        break;
+                    case 'z':
+                        if (e.shiftKey) {
+                            e.preventDefault();
+                            document.execCommand('redo');
+                        } else {
+                            e.preventDefault();
+                            document.execCommand('undo');
+                        }
+                        break;
+                    case 'y':
+                        e.preventDefault();
+                        document.execCommand('redo');
+                        break;
+                }
+                this.updateToolbarState();
+            }
+        });
+    }
+
+    updateToolbarState() {
+        const toolbar = document.querySelector('.wysiwyg-toolbar');
+        if (!toolbar) return;
+
+        // Atualizar estado dos botões
+        toolbar.querySelectorAll('[data-command]').forEach(btn => {
+            const command = btn.dataset.command;
+            if (['bold', 'italic', 'underline', 'strikeThrough'].includes(command)) {
+                btn.classList.toggle('active', document.queryCommandState(command));
+            }
+        });
+
+        // Atualizar selects
+        try {
+            const formatBlock = document.queryCommandValue('formatBlock');
+            const formatSelect = toolbar.querySelector('[data-command="formatBlock"]');
+            if (formatSelect && formatBlock) {
+                formatSelect.value = formatBlock.toLowerCase();
+            }
+        } catch (e) {}
+    }
+
+    toggleSourceView() {
+        const editor = document.getElementById('slideEditor');
+        if (!editor) return;
+
+        if (editor.classList.contains('source-view')) {
+            // Voltar para visualização normal
+            const html = editor.textContent;
+            editor.innerHTML = html;
+            editor.contentEditable = true;
+            editor.classList.remove('source-view');
+        } else {
+            // Mostrar código HTML
+            const html = editor.innerHTML;
+            editor.textContent = html;
+            editor.contentEditable = false;
+            editor.classList.add('source-view');
+        }
+    }
+
+    makeSlideEditable(slideElement) {
+        // Remove a funcionalidade antiga, agora usa WYSIWYG
+    }
+
+    saveCurrentSlide() {
+        if (this.currentSlideIndex >= 0 && this.slides[this.currentSlideIndex]) {
+            const currentEditor = document.getElementById('slideEditor');
+            if (currentEditor) {
+                // Atualiza o conteúdo do slide atual
+                this.slides[this.currentSlideIndex].content = currentEditor.innerHTML;
+
+                // Cria um elemento clonado para manter consistência
+                const clonedElement = document.createElement('div');
+                clonedElement.innerHTML = currentEditor.innerHTML;
+                this.slides[this.currentSlideIndex].element = clonedElement;
+
+                // Atualiza o título na lista se mudou
+                const titleEl = currentEditor.querySelector('h1, h2, h3');
+                if (titleEl) {
+                    this.slides[this.currentSlideIndex].title = titleEl.textContent || `Slide ${this.currentSlideIndex + 1}`;
+                    this.renderSlidesList(); // Atualiza a lista de slides
+                }
+            }
+        }
     }
 
     parseHtmlToSlides(htmlContent) {
@@ -360,19 +674,35 @@ class PresentationEditor {
     selectSlide(index) {
         if (index < 0 || index >= this.slides.length) return;
 
+        // Salva slide atual antes de trocar
+        this.saveCurrentSlide();
+
         this.currentSlideIndex = index;
         this.renderCurrentSlide();
         this.renderSlidesList();
     }
 
     renderCurrentSlide() {
-        const container = document.getElementById('currentSlideContent');
+        const container = document.getElementById('slideEditor');
         const slide = this.slides[this.currentSlideIndex];
 
-        if (!slide) return;
+        if (!slide || !container) return;
 
-        container.innerHTML = this.renderEditableSlide(slide);
-        this.makeElementsEditable();
+        // Remove toolbar antiga se existir
+        const existingToolbar = container.parentNode.querySelector('.wysiwyg-toolbar');
+        if (existingToolbar) {
+            existingToolbar.remove();
+        }
+
+        // Usa o conteúdo do slide diretamente no editor
+        if (slide.element) {
+            container.innerHTML = slide.element.innerHTML;
+        } else {
+            container.innerHTML = slide.content;
+        }
+
+        // Inicializar editor WYSIWYG
+        this.initWysiwygEditor();
     }
 
     renderEditableSlide(slide) {
@@ -800,63 +1130,97 @@ class PresentationEditor {
 
     // Save/Export functions
     async savePresentation() {
-        const presentationData = {
-            id: this.presentationId,
-            slides: this.slides,
-            htmlContent: this.generateFullHTML()
-        };
-
         try {
-            const response = await fetch('/api/presentations/save', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(presentationData)
-            });
+            // Salva slide atual primeiro
+            this.saveCurrentSlide();
 
-            const result = await response.json();
+            // Gera HTML atualizado
+            const fullHTML = this.generateFullHTML();
 
-            if (result.success) {
-                this.showNotification('Apresentação salva com sucesso!', 'success');
-                this.presentationId = result.data.id;
+            // Mostra opções de salvamento
+            const action = confirm('Deseja salvar as alterações?\n\nOK = Download do arquivo HTML\nCancelar = Copiar para área de transferência');
+
+            if (action) {
+                // Download do arquivo
+                this.downloadHTML(fullHTML);
             } else {
-                throw new Error(result.error);
+                // Copia para área de transferência
+                await navigator.clipboard.writeText(fullHTML);
+                alert('HTML copiado para a área de transferência!');
             }
+
+            return true;
         } catch (error) {
             console.error('Erro ao salvar:', error);
-            this.showNotification('Erro ao salvar apresentação', 'danger');
+            alert('Erro ao salvar apresentação: ' + error.message);
+            return false;
         }
     }
 
     generateFullHTML() {
-        // Gera HTML completo da apresentação
-        const slidesHTML = this.slides.map(slide => `
-            <section class="slide" data-slide-id="${slide.id}">
-                ${this.renderSlideForExport(slide)}
-            </section>
-        `).join('');
+        // Reconstrói o HTML da apresentação mantendo o visual original
+        const slides = this.slides.map(slide => {
+            // Limpa atributos do editor WYSIWYG
+            let slideHTML = slide.content
+                .replace(/contenteditable="true"/g, '')
+                .replace(/class="[^"]*wysiwyg[^"]*"/g, '')
+                .replace(/data-command="[^"]*"/g, '')
+                .replace(/spellcheck="[^"]*"/g, '');
 
-        return `
-            <!DOCTYPE html>
-            <html lang="pt-BR">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Apresentação Gerada</title>
-                <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-                <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-                <style>
-                    .slide { min-height: 100vh; padding: 2rem; }
-                    .slide:not(:last-child) { page-break-after: always; }
-                </style>
-            </head>
-            <body>
-                ${slidesHTML}
-                <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-            </body>
-            </html>
-        `;
+            return slideHTML;
+        });
+
+        // Pega o HTML original e substitui apenas os slides
+        if (this.originalHTML) {
+            let fullHTML = this.originalHTML;
+
+            // Substitui os slides
+            slides.forEach((slideHTML, index) => {
+                const slideRegex = new RegExp(`<article[^>]*data-index="${index}"[^>]*>.*?</article>`, 'gs');
+                if (slideRegex.test(fullHTML)) {
+                    fullHTML = fullHTML.replace(slideRegex, slideHTML);
+                }
+            });
+
+            return fullHTML;
+        }
+
+        // Fallback para HTML básico
+        return this.generateDefaultHTML(slides);
+    }
+
+    generateDefaultHTML(slides) {
+        // Gera HTML básico se não tiver o original
+        return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apresentação Editada</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        .slide { padding: 2rem; margin: 1rem 0; border: 1px solid #ddd; border-radius: 8px; }
+        .slide h1, .slide h2, .slide h3 { color: #2d5a87; }
+    </style>
+</head>
+<body>
+    <div class="presentation">
+        ${slides.join('\n')}
+    </div>
+</body>
+</html>`;
+    }
+
+    downloadHTML(htmlContent) {
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `apresentacao-editada-${Date.now()}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     }
 
     renderSlideForExport(slide) {

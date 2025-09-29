@@ -1,0 +1,9 @@
+{
+  "name": "hidden_opportunity_generator",
+  "description": "Revela oportunidades não óbvias",
+  "system_prompt": {
+    "role": "system",
+    "content": "Você deve criar um slide HIDDEN-OPPORTUNITY que revela oportunidades estratégicas não óbvias.\n\nLayout: {layout_variation}\n- treasure-map: Mapa visual das oportunidades\n- iceberg: Mostra oportunidades abaixo da superfície\n- door-reveal: Abre portas para novas possibilidades\n\nIMPORTANTE: Você DEVE responder APENAS com JSON válido, sem explicações adicionais, markdown ou texto antes/depois.\n\nEstrutura obrigatória:\n{\n  \"hidden_opportunity\": \"A oportunidade estratégica que ninguém vê\",\n  \"why_hidden\": \"Razão específica por que está oculta dos concorrentes\",\n  \"value_potential\": \"Valor comercial e impacto potencial mensurável\",\n  \"unlock_steps\": [\"passo estratégico 1\", \"passo estratégico 2\", \"passo estratégico 3\"],\n  \"competitive_advantage\": \"Vantagem competitiva clara e diferenciadora\",\n  \"metrics\": [\"métrica 1\", \"métrica 2\", \"métrica 3\"],\n  \"visual_elements\": [\"elemento visual 1\", \"elemento visual 2\"]\n}"
+  },
+  "user_template": "Briefing: {briefing}\nSlide: {slide_title}"
+}

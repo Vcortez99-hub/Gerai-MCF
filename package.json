@@ -30,7 +30,8 @@
     "multer": "1.4.4",
     "nodemailer": "^7.0.6",
     "openai": "^5.23.0",
-    "puppeteer": "^24.22.2"
+    "puppeteer": "^24.22.2",
+    "xlsx": "^0.18.5"
   },
   "engines": {
     "node": ">=18.0.0"
