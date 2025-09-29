@@ -1,6 +1,6 @@
 /**
  * PromptManager - Sistema centralizado de gerenciamento de prompts
- * Carrega prompts de arquivos JSON externos para facilitar manutenção
+ * Carrega prompts do arquivo consolidado PROMPTS_CONSOLIDADOS.md
  */
 
 const fs = require('fs-extra');
@@ -8,12 +8,12 @@ const path = require('path');
 
 class PromptManager {
   constructor() {
-    this.promptsPath = path.join(__dirname, '..', 'prompts');
+    this.consolidatedFile = path.join(__dirname, '..', 'PROMPTS_CONSOLIDADOS.md');
     this.cache = new Map();
     this.initialized = false;
 
     console.log('📝 PromptManager inicializado');
-    console.log(`📂 Caminho dos prompts: ${this.promptsPath}`);
+    console.log(`📂 Caminho do arquivo consolidado: ${this.consolidatedFile}`);
   }
 
   /**
@@ -23,7 +23,7 @@ class PromptManager {
     if (this.initialized) return;
 
     try {
-      console.log('🔄 Carregando prompts externos...');
+      console.log('🔄 Carregando prompts do arquivo consolidado...');
       await this.loadAllPrompts();
       this.initialized = true;
       console.log(`✅ ${this.cache.size} prompts carregados com sucesso`);
@@ -34,28 +34,81 @@ class PromptManager {
   }
 
   /**
-   * Carrega todos os prompts de todos os diretórios
+   * Carrega todos os prompts do arquivo consolidado
    */
   async loadAllPrompts() {
-    const categories = ['analysis', 'generation', 'visualization'];
+    const fileContent = await fs.readFile(this.consolidatedFile, 'utf8');
 
-    for (const category of categories) {
-      const categoryPath = path.join(this.promptsPath, category);
+    // Regex para encontrar blocos JSON
+    const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```/g;
+    let match;
 
-      if (await fs.pathExists(categoryPath)) {
-        const files = await fs.readdir(categoryPath);
+    while ((match = jsonBlockRegex.exec(fileContent)) !== null) {
+      try {
+        const jsonContent = match[1];
+        const promptData = JSON.parse(jsonContent);
 
-        for (const file of files) {
-          if (file.endsWith('.json')) {
-            const promptPath = path.join(categoryPath, file);
-            const promptData = await fs.readJson(promptPath);
+        // Determinar categoria e nome baseado na estrutura do prompt
+        let category, name;
 
-            const key = `${category}/${file.replace('.json', '')}`;
-            this.cache.set(key, promptData);
+        // Se o prompt tem um nome definido, usar para determinar categoria e nome
+        if (promptData.name) {
+          // Mapear nomes conhecidos para suas categorias
+          const nameToCategory = {
+            'briefing_analysis': 'analysis',
+            'data_analysis_generator': 'analysis',
+            'data_insights_generator': 'analysis',
+            'determine_visualization_type': 'analysis',
+            'visualization_type_selector': 'analysis',
+            'chart_metrics_generator': 'generation',
+            'content_slide_generator': 'generation',
+            'cover_slide_generator': 'generation',
+            'hidden_opportunity_generator': 'generation',
+            'insights_no_attachments_generator': 'generation',
+            'perspective_shift_generator': 'generation',
+            'shock_reveal_generator': 'generation',
+            'slide_structure_generator': 'generation',
+            'contextual_visualization_generator': 'visualization'
+          };
 
-            console.log(`📄 Carregado: ${key}`);
-          }
+          category = nameToCategory[promptData.name] || 'generation';
+
+          // Converter nome para formato de arquivo (remover sufixos)
+          name = promptData.name
+            .replace('_generator', '')
+            .replace('_selector', '')
+            .replace('_analysis', '');
+
+          // Casos especiais de mapeamento
+          if (promptData.name === 'briefing_analysis') name = 'briefing-analysis';
+          if (promptData.name === 'data_analysis_generator') name = 'data-analysis';
+          if (promptData.name === 'data_insights_generator') name = 'data-insights';
+          if (promptData.name === 'determine_visualization_type') name = 'determine-visualization';
+          if (promptData.name === 'visualization_type_selector') name = 'visualization-type';
+          if (promptData.name === 'chart_metrics_generator') name = 'chart-metrics';
+          if (promptData.name === 'content_slide_generator') name = 'content-slide';
+          if (promptData.name === 'cover_slide_generator') name = 'cover-slide';
+          if (promptData.name === 'hidden_opportunity_generator') name = 'hidden-opportunity';
+          if (promptData.name === 'insights_no_attachments_generator') name = 'insights-no-attachments';
+          if (promptData.name === 'perspective_shift_generator') name = 'perspective-shift';
+          if (promptData.name === 'shock_reveal_generator') name = 'shock-reveal';
+          if (promptData.name === 'slide_structure_generator') name = 'slide-structure';
+          if (promptData.name === 'contextual_visualization_generator') name = 'contextual-visualization';
+
+        } else {
+          // Fallback para prompts sem nome definido
+          category = 'generation';
+          name = 'unknown-' + Math.random().toString(36).substr(2, 9);
         }
+
+        const key = `${category}/${name}`;
+        this.cache.set(key, promptData);
+
+        console.log(`📄 Carregado: ${key}`);
+
+      } catch (parseError) {
+        console.warn(`⚠️ Erro ao fazer parse do JSON: ${parseError.message}`);
+        continue;
       }
     }
   }

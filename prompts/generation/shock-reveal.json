@@ -1,9 +1,0 @@
-{
-  "name": "shock_reveal_generator",
-  "description": "Cria slides que revelam dados surpreendentes e quebram paradigmas",
-  "system_prompt": {
-    "role": "system",
-    "content": "Você deve criar um slide SHOCK-REVEAL que revela dados surpreendentes e quebra paradigmas.\n\nLayout: {layout_variation}\n- timeline: Mostra evolução temporal dramática\n- split-screen: Contraste antes/depois ou expectativa/realidade\n- center-impact: Foco central com dados radiantes\n\nIMPORTANTE: Você DEVE responder APENAS com JSON válido, sem explicações adicionais, markdown ou texto antes/depois.\n\nEstrutura obrigatória:\n{\n  \"shock_title\": \"Título que choca e impacta\",\n  \"reveal_data\": \"Dado/estatística surpreendente e específica\",\n  \"context\": \"Explicação clara de por que isso é surpreendente\",\n  \"implications\": [\"implicação comercial 1\", \"implicação estratégica 2\", \"benefício direto 3\"],\n  \"visual_elements\": [\"elemento visual específico 1\", \"elemento visual específico 2\", \"elemento visual específico 3\"]\n}"
-  },
-  "user_template": "Briefing: {briefing}\nSlide: {slide_title}\nPurpose: {slide_purpose}"
-}

@@ -6,7 +6,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3011;
+const PORT = process.env.PORT || 3029;
 
 // Middleware
 app.use(cors());
@@ -125,12 +125,222 @@ const OpenAIService = require('./services/OpenAIService');
 const SupabaseAuthService = require('./services/SupabaseAuthService');
 const PresentationHistoryService = require('./services/PresentationHistoryService');
 const PresentationService = require('./services/PresentationService');
+const ModernPresentationGenerator = require('./src/scripts/modern-generator');
 
 // Import Middleware
 const { authenticateUser, optionalAuth } = require('./middleware/auth');
 
 // Initialize services
 const authService = new SupabaseAuthService();
+
+// Função para gerar conteúdo estruturado diretamente
+function generateDirectStructuredContent(briefing, config) {
+  const slideCount = config.slideCount || 6;
+  const company = config.company || 'Darede';
+  const audience = config.audience || 'Executivos';
+
+  // Analisar briefing para detectar tipo de apresentação
+  const isAboutIA = briefing.toLowerCase().includes('ia') || briefing.toLowerCase().includes('inteligência artificial');
+  const isAboutData = briefing.toLowerCase().includes('dados') || briefing.toLowerCase().includes('analytics');
+  const isCommercial = briefing.toLowerCase().includes('vendas') || briefing.toLowerCase().includes('comercial');
+
+  // Extrair título principal
+  const lines = briefing.split('\n').filter(l => l.trim());
+  const mainTitle = lines[0] || 'Apresentação Corporativa';
+
+  // Gerar slides estruturados
+  const slides = [];
+
+  // Slide 1: Título (sempre)
+  slides.push({
+    slideNumber: 1,
+    type: 'title-hero',
+    title: isAboutIA ?
+      `Transformação Digital com <span class="text-gradient">Inteligência Artificial</span>` :
+      isAboutData ?
+      `Potencialize seus <span class="text-gradient">Dados</span>` :
+      `${mainTitle}`,
+    subtitle: isAboutIA ?
+      'Revolucionando operações empresariais com tecnologia de ponta' :
+      isAboutData ?
+      'Transforme dados em insights estratégicos' :
+      'Soluções inovadoras para seu negócio',
+    elements: {
+      icon: isAboutIA ? 'fas fa-brain' : isAboutData ? 'fas fa-chart-line' : 'fas fa-rocket'
+    }
+  });
+
+  // Slide 2: Pilares/Benefícios
+  if (isAboutIA) {
+    slides.push({
+      slideNumber: 2,
+      type: 'content-highlight',
+      title: 'Nossos <span class="text-gradient">Pilares Tecnológicos</span>',
+      subtitle: 'Fundamentos que sustentam nossa excelência em IA',
+      elements: {
+        icon: 'fas fa-cogs',
+        highlights: [
+          'Inteligência Artificial Avançada com Machine Learning',
+          'Cloud Computing Seguro e Escalável',
+          'Automação Inteligente de Processos',
+          'Análise Preditiva em Tempo Real'
+        ]
+      }
+    });
+  } else if (isAboutData) {
+    slides.push({
+      slideNumber: 2,
+      type: 'content-highlight',
+      title: 'Transformação através dos <span class="text-gradient">Dados</span>',
+      subtitle: 'Como seus dados podem revolucionar seu negócio',
+      elements: {
+        icon: 'fas fa-database',
+        highlights: [
+          'Coleta e Integração de Dados Multicanal',
+          'Analytics Avançados e Business Intelligence',
+          'Visualização Intuitiva de Insights',
+          'Tomada de Decisão Baseada em Dados'
+        ]
+      }
+    });
+  } else {
+    slides.push({
+      slideNumber: 2,
+      type: 'content-highlight',
+      title: 'Por que Escolher a <span class="text-gradient">Darede</span>?',
+      subtitle: 'Diferenciais que nos tornam únicos no mercado',
+      elements: {
+        icon: 'fas fa-star',
+        highlights: [
+          'Expertise em Tecnologia de Ponta',
+          'Soluções Personalizadas para Cada Cliente',
+          'Suporte 24/7 e Acompanhamento Contínuo',
+          'ROI Comprovado e Resultados Mensuráveis'
+        ]
+      }
+    });
+  }
+
+  // Slide 3: Estatísticas (sempre)
+  slides.push({
+    slideNumber: 3,
+    type: 'stats-grid',
+    title: 'Resultados que <span class="text-gradient">Comprovam</span> nossa Eficiência',
+    subtitle: 'Números que demonstram o impacto de nossas soluções',
+    elements: {
+      stats: [
+        {
+          value: '150%',
+          label: 'Aumento de Produtividade',
+          description: 'Melhoria média em processos automatizados',
+          icon: 'fas fa-rocket'
+        },
+        {
+          value: '35%',
+          label: 'Redução de Custos',
+          description: 'Economia operacional comprovada',
+          icon: 'fas fa-chart-line'
+        },
+        {
+          value: '98%',
+          label: 'Satisfação dos Clientes',
+          description: 'Taxa de aprovação de nossos projetos',
+          icon: 'fas fa-star'
+        },
+        {
+          value: '24/7',
+          label: 'Suporte Contínuo',
+          description: 'Disponibilidade total para nossos clientes',
+          icon: 'fas fa-headset'
+        }
+      ]
+    }
+  });
+
+  // Slide 4: Processo/Metodologia
+  slides.push({
+    slideNumber: 4,
+    type: 'timeline-horizontal',
+    title: 'Nossa <span class="text-gradient">Metodologia</span> Comprovada',
+    subtitle: 'Como entregamos resultados em 4 fases estratégicas',
+    elements: {
+      process: [
+        {
+          title: 'Diagnóstico',
+          description: 'Análise completa da situação atual',
+          icon: 'fas fa-search'
+        },
+        {
+          title: 'Planejamento',
+          description: 'Estratégia personalizada e roadmap',
+          icon: 'fas fa-tasks'
+        },
+        {
+          title: 'Implementação',
+          description: 'Execução com acompanhamento rigoroso',
+          icon: 'fas fa-cogs'
+        },
+        {
+          title: 'Otimização',
+          description: 'Melhorias contínuas e suporte',
+          icon: 'fas fa-chart-line'
+        }
+      ]
+    }
+  });
+
+  // Slides adicionais conforme necessário
+  if (slideCount >= 5) {
+    slides.push({
+      slideNumber: 5,
+      type: 'vs-split',
+      title: 'Transformação <span class="text-gradient">Antes vs Depois</span>',
+      subtitle: 'O impacto real de nossas soluções',
+      elements: {
+        comparison: {
+          left: {
+            title: 'Situação Atual',
+            items: [
+              'Processos manuais demorados',
+              'Dados dispersos e desorganizados',
+              'Tomada de decisão lenta',
+              'Altos custos operacionais'
+            ]
+          },
+          right: {
+            title: 'Com a Darede',
+            items: [
+              'Automação inteligente completa',
+              'Dados integrados e analytics',
+              'Decisões rápidas baseadas em IA',
+              'Redução significativa de custos'
+            ]
+          }
+        }
+      }
+    });
+  }
+
+  if (slideCount >= 6) {
+    slides.push({
+      slideNumber: 6,
+      type: 'content-standard',
+      title: 'Próximos <span class="text-gradient">Passos</span>',
+      content: `Pronto para transformar seu negócio?\n\n• Agende uma consultoria gratuita\n• Receba um diagnóstico personalizado\n• Conheça nossas soluções em detalhes\n\nContato: contato@darede.com.br\nTelefone: (11) 9999-9999`,
+      elements: {
+        icon: 'fas fa-handshake'
+      }
+    });
+  }
+
+  return {
+    title: slides[0].title.replace(/<[^>]*>/g, ''), // Remover HTML para o título principal
+    subtitle: slides[0].subtitle,
+    totalSlides: slides.length,
+    slides: slides.slice(0, slideCount), // Limitar ao número solicitado
+    format: 'structured'
+  };
+}
 
 // AI service for content generation
 class AIContentService {
@@ -141,7 +351,120 @@ class AIContentService {
 
   static async generateContent(briefing, config) {
     const service = new AIContentService();
+
+    // Usar prompt moderno se format = 'structured'
+    if (config.format === 'structured') {
+      return await service.generateStructuredContent(briefing, config);
+    }
+
     return await service.aiService.generateContent(briefing, config);
+  }
+
+  async generateStructuredContent(briefing, config) {
+    try {
+      // Carregar prompt moderno
+      const modernPrompt = fs.readFileSync(
+        path.join(__dirname, 'prompts', 'modern-presentation-prompt.md'),
+        'utf8'
+      );
+
+      // Criar prompt específico
+      const fullPrompt = `${modernPrompt}
+
+---
+
+## BRIEFING DO CLIENTE:
+${briefing}
+
+---
+
+## CONFIGURAÇÕES:
+- Quantidade de slides: ${config.slideCount || 6}
+- Público-alvo: ${config.audience || 'Executivos'}
+- Empresa: ${config.company || 'Darede'}
+- Setor: Tecnologia/IA
+
+## INSTRUÇÕES FINAIS:
+Gere o JSON seguindo EXATAMENTE a estrutura especificada no prompt.
+Varie os tipos de slides para criar uma apresentação visualmente interessante.
+Foque em resultados, benefícios e diferenciação competitiva.
+Use linguagem executiva apropriada.
+
+Responda APENAS com o JSON válido:`;
+
+      // Chamar IA com prompt estruturado
+      const response = await this.aiService.generateContent(fullPrompt, {
+        ...config,
+        maxTokens: 3000, // Aumentar limite para resposta estruturada
+        temperature: 0.7 // Criatividade moderada
+      });
+
+      if (!response.success) {
+        return response;
+      }
+
+      // Tentar parsear JSON da resposta
+      try {
+        let jsonContent = response.data.content || response.data;
+
+        // Limpar resposta se necessário
+        if (typeof jsonContent === 'string') {
+          // Remover markdown ou texto extra
+          jsonContent = jsonContent.replace(/```json\n?|\n?```/g, '');
+          jsonContent = jsonContent.trim();
+
+          // Encontrar JSON válido
+          const jsonStart = jsonContent.indexOf('{');
+          const jsonEnd = jsonContent.lastIndexOf('}') + 1;
+          if (jsonStart >= 0 && jsonEnd > jsonStart) {
+            jsonContent = jsonContent.substring(jsonStart, jsonEnd);
+          }
+        }
+
+        const parsedContent = JSON.parse(jsonContent);
+
+        return {
+          success: true,
+          data: {
+            title: parsedContent.title,
+            subtitle: parsedContent.subtitle,
+            slides: parsedContent.slides || [],
+            totalSlides: parsedContent.totalSlides || parsedContent.slides?.length || 0,
+            format: 'structured'
+          }
+        };
+
+      } catch (parseError) {
+        console.error('Erro ao parsear JSON da IA:', parseError);
+        console.log('Resposta recebida:', response.data);
+
+        // Fallback: usar conteúdo original
+        return {
+          success: true,
+          data: {
+            title: 'Apresentação Gerada',
+            content: response.data.content || briefing,
+            slides: [
+              {
+                slideNumber: 1,
+                type: 'title-hero',
+                title: 'Apresentação Gerada',
+                content: briefing.split('\n')[0] || 'Apresentação',
+                elements: { icon: 'fas fa-presentation' }
+              }
+            ],
+            format: 'fallback'
+          }
+        };
+      }
+
+    } catch (error) {
+      console.error('Erro na geração estruturada:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
   }
 }
 
@@ -310,6 +633,136 @@ app.post('/api/templates/upload', upload.single('template'), async (req, res) =>
 // ===== AI GENERATION ROUTES =====
 
 // Generate presentation
+
+// Nova rota moderna para geração inteligente
+app.post('/api/generate-modern', optionalAuth, async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const {
+      briefing,
+      config = {},
+      slideTopics = []
+    } = req.body;
+
+    // Validação
+    if (!briefing) {
+      return res.status(400).json({
+        success: false,
+        error: 'Briefing é obrigatório'
+      });
+    }
+
+    console.log(`🚀 Geração Moderna iniciada`);
+    console.log(`📝 Briefing: ${briefing.substring(0, 100)}...`);
+
+    // 1. Usar AIContentService original com formato estruturado
+    const aiContent = await AIContentService.generateContent(briefing, {
+      ...config,
+      format: 'structured'
+    });
+
+    if (!aiContent.success) {
+      return res.status(500).json({
+        success: false,
+        error: aiContent.error || 'Erro na geração de conteúdo da IA'
+      });
+    }
+
+    console.log(`✅ Conteúdo AI estruturado gerado`);
+    console.log('📊 Debug - aiContent.data:', JSON.stringify(aiContent.data, null, 2));
+
+    // 2. Usar novo gerador moderno
+    const modernGenerator = new ModernPresentationGenerator();
+
+    // Converter conteúdo AI em slides estruturados
+    const slides = [];
+    if (aiContent.data.slides && Array.isArray(aiContent.data.slides)) {
+      aiContent.data.slides.forEach(slide => {
+        slides.push({
+          content: slide.content || slide.title || '',
+          title: slide.title || '',
+          type: slide.type || 'content'
+        });
+      });
+    } else {
+      // Fallback: usar conteúdo direto
+      const lines = briefing.split('\n').filter(line => line.trim());
+      lines.forEach((line, index) => {
+        slides.push({
+          content: line,
+          title: `Slide ${index + 1}`,
+          type: index === 0 ? 'title' : 'content'
+        });
+      });
+    }
+
+    console.log('📋 Debug - slides processados:', JSON.stringify(slides, null, 2));
+
+    // 3. Gerar apresentação com sistema moderno
+    const presentationHtml = modernGenerator.generatePresentation(slides);
+
+    // 4. Salvar arquivo
+    const presentationId = `pres_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const fileName = `${presentationId}.html`;
+    const filePath = path.join(process.env.GENERATED_DIR || './generated', fileName);
+
+    await fs.writeFile(filePath, presentationHtml, 'utf8');
+
+    console.log(`📄 Apresentação moderna salva: ${fileName}`);
+
+    // 5. Salvar no histórico
+    let historyId = null;
+    if (req.userId) {
+      try {
+        const generationTime = Date.now() - startTime;
+        const historyEntry = await PresentationHistoryService.savePresentation(req.userId, {
+          title: aiContent.data.title || 'Apresentação Moderna',
+          briefing,
+          templateId: 'modern-generator',
+          templateName: 'Gerador Moderno',
+          config,
+          aiContent: aiContent.data,
+          generatedFilePath: filePath,
+          generatedFileUrl: `/generated/${fileName}`,
+          generationTimeMs: generationTime
+        });
+        historyId = historyEntry.id;
+      } catch (historyError) {
+        console.error('Erro ao salvar no histórico:', historyError);
+      }
+    }
+
+    // 6. Resposta
+    res.json({
+      success: true,
+      message: 'Apresentação moderna gerada com sucesso!',
+      data: {
+        fileName,
+        downloadUrl: `/generated/${fileName}`,
+        presentationId,
+        historyId,
+        title: aiContent.data.title || 'Apresentação Moderna',
+        generatedAt: new Date().toISOString(),
+        slides: slides.length,
+        features: [
+          'Glassmorphism effects',
+          'Animações cinematográficas',
+          'Layouts inteligentes',
+          'Design responsivo',
+          'Navegação avançada'
+        ]
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Erro na geração moderna:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Erro interno na geração moderna'
+    });
+  }
+});
+
 app.post('/api/generate', optionalAuth, async (req, res) => {
   const startTime = Date.now();
   try {
