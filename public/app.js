@@ -740,16 +740,32 @@ function generateTopicFields() {
     let html = '<div class="row">';
 
     for (let i = 1; i <= slideCount; i++) {
+        // FIX ISSUE 2: Last slide should be auto-filled and locked
+        const isLastSlide = (i === slideCount);
+        const defaultValue = isLastSlide ? 'Final da Apresentação' : '';
+        const isReadonly = isLastSlide ? 'readonly' : '';
+        const placeholderText = isLastSlide ? 'Slide de encerramento (fixo)' : 'Ex: Introdução, Problema, Solução, Benefícios...';
+        const inputStyle = isLastSlide ?
+            'border-left: 4px solid #10B981; background-color: #f0fdf4;' :
+            'border-left: 4px solid var(--primary-color);';
+
         html += `
             <div class="col-md-6 mb-3">
-                <label class="form-label fw-bold">Slide ${i}</label>
+                <label class="form-label fw-bold">
+                    Slide ${i}
+                    ${isLastSlide ? '<span class="badge bg-success ms-2">Encerramento</span>' : ''}
+                </label>
                 <input type="text"
                        class="form-control"
                        data-slide-topic
                        data-slide-number="${i}"
-                       placeholder="Ex: Introdução, Problema, Solução, Benefícios..."
-                       style="border-left: 4px solid var(--primary-color);">
-                <small class="text-muted">Tópico/assunto principal do slide ${i}</small>
+                       value="${defaultValue}"
+                       placeholder="${placeholderText}"
+                       ${isReadonly}
+                       style="${inputStyle}">
+                <small class="text-muted">
+                    ${isLastSlide ? '🔒 Slide de encerramento bloqueado automaticamente' : `Tópico/assunto principal do slide ${i}`}
+                </small>
             </div>
         `;
     }
@@ -915,6 +931,17 @@ function setupAttachmentDragDrop() {
     uploadZone.addEventListener('click', () => {
         document.getElementById('attachmentInput').click();
     });
+
+    // FIX ISSUE 1: Add onchange event listener directly in JavaScript
+    // This ensures files are processed immediately on first selection
+    const attachmentInput = document.getElementById('attachmentInput');
+    if (attachmentInput) {
+        attachmentInput.addEventListener('change', function(e) {
+            if (this.files && this.files.length > 0) {
+                handleAttachmentUpload(this);
+            }
+        });
+    }
 }
 
 // Funções globais para compatibilidade

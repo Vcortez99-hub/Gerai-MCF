@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Darede - Sistema Modernizado de Apresentações</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #1e5c3f;
+            --primary-light: #2d7a55;
+            --primary-dark: #16462e;
+            --secondary-color: #ff9500;
+            --success-color: #10B981;
+            --warning-color: #ff9500;
+            --danger-color: #EF4444;
+            --blue-gradient: linear-gradient(135deg, #1e5c3f 0%, #2d7a55 50%, #10B981 100%);
+            --blue-dark-gradient: linear-gradient(135deg, #1e5c3f 0%, #2d7a55 50%, #ff9500 100%);
+            --accent-gradient: linear-gradient(135deg, #ff9500 0%, #f59e0b 100%);
+            --surface: #FFFFFF;
+            --surface-dark: #1e5c3f;
+            --surface-gray: #2d7a55;
+            --border-light: #d0d7de;
+            --text-primary: #2c2c2c;
+            --text-secondary: #666666;
+            --glass-bg: rgba(30, 92, 63, 0.8);
+            --glass-border: rgba(255, 149, 0, 0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--blue-dark-gradient);
+            background-attachment: fixed;
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+            position: relative;
+            color: var(--text-primary);
+        }
+
+        /* Animated Background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                radial-gradient(circle at 20% 50%, rgba(79, 70, 229, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(124, 58, 237, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
+            z-index: -1;
+            animation: floatBackground 20s ease-in-out infinite;
+        }
+
+        @keyframes floatBackground {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(-30px, -30px) rotate(1deg); }
+            66% { transform: translate(30px, -20px) rotate(-1deg); }
+        }
+
+        .navbar {
+            background: var(--glass-bg) !important;
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            box-shadow: 0 4px 32px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.5rem;
+            color: white !important;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .nav-link {
+            color: rgba(255, 255, 255, 0.9) !important;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: white !important;
+            transform: translateY(-2px);
+        }
+
+        .container-fluid {
+            padding: 2rem 1rem;
+        }
+
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Cards com Glass Effect */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                0 2px 8px rgba(0, 0, 0, 0.05),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.2),
+                transparent
+            );
+            transition: left 0.8s;
+        }
+
+        .glass-card:hover::before {
+            left: 100%;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow:
+                0 20px 60px rgba(0, 0, 0, 0.2),
+                0 8px 20px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 1);
+        }
+
+        .hero-title {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .hero-subtitle {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.9);
+            text-align: center;
+            margin-bottom: 2rem;
+            font-weight: 300;
+        }
+
+        .form-floating label {
+            color: var(--text-secondary);
+        }
+
+        .form-control {
+            border: 2px solid rgba(30, 92, 63, 0.1);
+            border-radius: 12px;
+            padding: 1rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(30, 92, 63, 0.15);
+            background: white;
+        }
+
+        textarea.form-control {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .btn-modern {
+            background: var(--blue-gradient);
+            border: none;
+            border-radius: 12px;
+            padding: 1rem 2rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: white;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            box-shadow:
+                0 4px 15px rgba(30, 92, 63, 0.3),
+                0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-modern::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent
+            );
+            transition: left 0.6s;
+        }
+
+        .btn-modern:hover::before {
+            left: 100%;
+        }
+
+        .btn-modern:hover {
+            transform: translateY(-3px);
+            box-shadow:
+                0 8px 25px rgba(30, 92, 63, 0.4),
+                0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-modern:active {
+            transform: translateY(-1px);
+        }
+
+        .btn-modern:disabled {
+            opacity: 0.6;
+            transform: none;
+            cursor: not-allowed;
+        }
+
+        /* Feature Cards */
+        .feature-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(30, 92, 63, 0.1);
+            height: 100%;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(30, 92, 63, 0.2);
+            border-color: var(--primary-color);
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            background: var(--blue-gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .feature-title {
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Loading Animation */
+        .loading-container {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(30, 92, 63, 0.1);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: var(--primary-color);
+            font-weight: 500;
+            font-size: 1.1rem;
+        }
+
+        /* Result Card */
+        .result-card {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(30, 92, 63, 0.1));
+            border: 2px solid var(--success-color);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        .result-card.error {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1));
+            border-color: var(--danger-color);
+        }
+
+        .result-title {
+            color: var(--success-color);
+            font-weight: 600;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .result-card.error .result-title {
+            color: var(--danger-color);
+        }
+
+        .result-info {
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .result-features {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-result {
+            background: var(--success-color);
+            color: white;
+            text-decoration: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .btn-result:hover {
+            background: #059669;
+            color: white;
+            transform: translateY(-2px);
+            text-decoration: none;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-up {
+            animation: fadeInUp 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .animate-delay-1 { animation-delay: 0.1s; }
+        .animate-delay-2 { animation-delay: 0.2s; }
+        .animate-delay-3 { animation-delay: 0.3s; }
+        .animate-delay-4 { animation-delay: 0.4s; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1rem;
+            }
+
+            .glass-card {
+                margin: 1rem;
+            }
+        }
+
+        .upgrade-badge {
+            background: var(--accent-gradient);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-brain me-2"></i>
+                Darede AI
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="fas fa-home me-1"></i> Início</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/editor.html"><i class="fas fa-edit me-1"></i> Editor</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#"><i class="fas fa-magic me-1"></i> Sistema Moderno</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid">
+        <div class="main-container">
+
+            <!-- Hero Section -->
+            <div class="text-center mb-5 animate-fade-up">
+                <div class="upgrade-badge animate-delay-1">
+                    <i class="fas fa-sparkles me-1"></i>
+                    SISTEMA MODERNIZADO
+                </div>
+                <h1 class="hero-title animate-delay-2">Sistema Avançado de Apresentações</h1>
+                <p class="hero-subtitle animate-delay-3">
+                    Powered by IA • Glassmorphism • Animações Cinematográficas • Design Responsivo
+                </p>
+            </div>
+
+            <div class="row g-4">
+                <!-- Form Card -->
+                <div class="col-lg-8">
+                    <div class="glass-card p-4 animate-fade-up animate-delay-4">
+                        <h3 class="mb-4" style="color: var(--primary-color);">
+                            <i class="fas fa-magic me-2"></i>
+                            Gerador Moderno
+                        </h3>
+
+                        <form id="modernForm">
+                            <div class="form-floating mb-3">
+                                <textarea
+                                    class="form-control"
+                                    id="briefing"
+                                    name="briefing"
+                                    placeholder="Descreva sua apresentação..."
+                                    required
+                                    style="min-height: 140px;"
+                                ></textarea>
+                                <label for="briefing">
+                                    <i class="fas fa-edit me-2"></i>
+                                    Briefing da Apresentação
+                                </label>
+                            </div>
+
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-4">
+                                    <div class="form-floating">
+                                        <select class="form-control" id="slideCount" name="slideCount">
+                                            <option value="4">4 slides</option>
+                                            <option value="5">5 slides</option>
+                                            <option value="6" selected>6 slides</option>
+                                            <option value="7">7 slides</option>
+                                            <option value="8">8 slides</option>
+                                        </select>
+                                        <label for="slideCount">
+                                            <i class="fas fa-layer-group me-2"></i>
+                                            Slides
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <div class="form-floating">
+                                        <select class="form-control" id="audience" name="audience">
+                                            <option value="Executivos" selected>Executivos (C-Level)</option>
+                                            <option value="Gerentes">Gerentes</option>
+                                            <option value="Técnico">Equipe Técnica</option>
+                                            <option value="Vendas">Equipe de Vendas</option>
+                                            <option value="Investidores">Investidores</option>
+                                        </select>
+                                        <label for="audience">
+                                            <i class="fas fa-users me-2"></i>
+                                            Público-Alvo
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <div class="form-floating">
+                                        <input
+                                            type="text"
+                                            class="form-control"
+                                            id="company"
+                                            name="company"
+                                            value="Darede"
+                                            placeholder="Nome da empresa"
+                                        >
+                                        <label for="company">
+                                            <i class="fas fa-building me-2"></i>
+                                            Empresa
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-modern w-100" id="generateBtn">
+                                <i class="fas fa-magic me-2"></i>
+                                Gerar Apresentação Moderna
+                            </button>
+                        </form>
+
+                        <!-- Loading -->
+                        <div id="loading" class="loading-container" style="display: none;">
+                            <div class="loading-spinner"></div>
+                            <p class="loading-text">
+                                <i class="fas fa-brain me-2"></i>
+                                Gerando apresentação moderna com IA...
+                            </p>
+                            <p class="text-muted small">Aplicando glassmorphism, animações e layouts inteligentes</p>
+                        </div>
+
+                        <!-- Result -->
+                        <div id="result" style="display: none;"></div>
+                    </div>
+                </div>
+
+                <!-- Features Card -->
+                <div class="col-lg-4">
+                    <div class="glass-card p-4 animate-fade-up animate-delay-4">
+                        <h4 class="mb-4" style="color: var(--primary-color);">
+                            <i class="fas fa-star me-2"></i>
+                            Recursos Modernos
+                        </h4>
+
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="feature-card">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-paint-brush"></i>
+                                    </div>
+                                    <h6 class="feature-title">Glassmorphism</h6>
+                                    <p class="feature-description">Efeitos visuais modernos</p>
+                                </div>
+                            </div>
+
+                            <div class="col-6">
+                                <div class="feature-card">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-rocket"></i>
+                                    </div>
+                                    <h6 class="feature-title">Animações</h6>
+                                    <p class="feature-description">Transições cinematográficas</p>
+                                </div>
+                            </div>
+
+                            <div class="col-6">
+                                <div class="feature-card">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-brain"></i>
+                                    </div>
+                                    <h6 class="feature-title">IA Inteligente</h6>
+                                    <p class="feature-description">Layouts adaptativos</p>
+                                </div>
+                            </div>
+
+                            <div class="col-6">
+                                <div class="feature-card">
+                                    <div class="feature-icon">
+                                        <i class="fas fa-mobile-alt"></i>
+                                    </div>
+                                    <h6 class="feature-title">Responsivo</h6>
+                                    <p class="feature-description">Todos os dispositivos</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 p-3 rounded-3" style="background: rgba(30, 92, 63, 0.1); border-left: 4px solid var(--primary-color);">
+                            <h6 style="color: var(--primary-color);">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Como funciona
+                            </h6>
+                            <ul class="mb-0 small text-muted">
+                                <li>IA analisa seu briefing</li>
+                                <li>Detecta tipos de conteúdo</li>
+                                <li>Seleciona layouts otimizados</li>
+                                <li>Gera apresentação moderna</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('modernForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const btn = document.getElementById('generateBtn');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+
+            // Coletar dados do formulário
+            const formData = {
+                briefing: document.getElementById('briefing').value,
+                config: {
+                    slideCount: parseInt(document.getElementById('slideCount').value),
+                    audience: document.getElementById('audience').value,
+                    company: document.getElementById('company').value,
+                    format: 'structured'
+                }
+            };
+
+            // Mostrar loading
+            btn.disabled = true;
+            loading.style.display = 'block';
+            result.style.display = 'none';
+
+            try {
+                console.log('🚀 Enviando dados:', formData);
+
+                const response = await fetch('/api/generate-modern', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+                console.log('✅ Resposta recebida:', data);
+
+                if (data.success) {
+                    result.className = 'result-card';
+                    result.innerHTML = `
+                        <h5 class="result-title">
+                            <i class="fas fa-check-circle"></i>
+                            Apresentação Moderna Gerada com Sucesso!
+                        </h5>
+                        <div class="result-info">
+                            <strong>Título:</strong> ${data.data.title}
+                        </div>
+                        <div class="result-info">
+                            <strong>Slides:</strong> ${data.data.slides} slides únicos
+                        </div>
+                        <div class="result-features">
+                            <strong>Recursos:</strong> ${data.data.features.join(' • ')}
+                        </div>
+                        <a href="${data.data.downloadUrl}" target="_blank" class="btn-result">
+                            <i class="fas fa-external-link-alt"></i>
+                            Abrir Apresentação
+                        </a>
+                    `;
+                } else {
+                    throw new Error(data.error || 'Erro desconhecido na geração');
+                }
+
+            } catch (error) {
+                console.error('❌ Erro:', error);
+                result.className = 'result-card error';
+                result.innerHTML = `
+                    <h5 class="result-title">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Erro na Geração Moderna
+                    </h5>
+                    <div class="result-info">
+                        ${error.message}
+                    </div>
+                    <div class="result-features">
+                        Tente novamente ou contate o suporte técnico.
+                    </div>
+                `;
+            } finally {
+                // Esconder loading
+                btn.disabled = false;
+                loading.style.display = 'none';
+                result.style.display = 'block';
+            }
+        });
+
+        // Exemplo de briefing
+        document.addEventListener('DOMContentLoaded', () => {
+            const briefingExamples = [
+                'Apresentação sobre transformação digital com IA para executivos, destacando automação, redução de custos e aumento de produtividade',
+                'Análise de dados e business intelligence para gerentes, com foco em ROI e insights estratégicos',
+                'Proposta comercial sobre soluções em nuvem para empresas, incluindo segurança e escalabilidade'
+            ];
+
+            const briefingTextarea = document.getElementById('briefing');
+            briefingTextarea.placeholder = briefingExamples[Math.floor(Math.random() * briefingExamples.length)];
+        });
+    </script>
+</body>
+</html>

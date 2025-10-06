@@ -1806,6 +1806,99 @@ ANÁLISE DETALHADA POR PLANILHA:
     }
     return '';
   }
+
+  /**
+   * Gera slide de história emocional
+   */
+  async generateEmotionalStorySlide(briefing, slideSpec, attachmentAnalysis, layoutVariation) {
+    try {
+      console.log('🎭 Gerando slide de história emocional...');
+
+      // Fallback para conteúdo simples e útil
+      const slideContent = {
+        title: slideSpec.title || 'Nossa Experiência Comprovada',
+        story: `Com base no seu briefing sobre ${briefing.substring(0, 100)}..., desenvolvemos uma abordagem prática que já transformou empresas similares.`,
+        benefits: [
+          'Implementação baseada em casos reais',
+          'Resultados mensuráveis em 30-60 dias',
+          'Suporte especializado durante todo o processo'
+        ],
+        cta: 'Vamos discutir como adaptar essa experiência para seu contexto específico.'
+      };
+
+      return this.generateContentSlide(slideContent, slideSpec);
+
+    } catch (error) {
+      console.error('❌ Erro ao gerar slide emocional:', error);
+      return this.generateFallbackSlide(slideSpec, 'Experiência e Resultados');
+    }
+  }
+
+  /**
+   * Gera slide de visão de transformação
+   */
+  async generateTransformationVisionSlide(briefing, slideSpec, attachmentAnalysis, layoutVariation) {
+    try {
+      console.log('🚀 Gerando slide de visão de transformação...');
+
+      // Fallback para conteúdo prático
+      const slideContent = {
+        title: slideSpec.title || 'Próximos Passos para Transformação',
+        vision: 'Baseado no seu briefing, identificamos oportunidades concretas de melhoria.',
+        steps: [
+          {
+            phase: 'Fase 1 (0-30 dias)',
+            description: 'Análise detalhada e planejamento customizado'
+          },
+          {
+            phase: 'Fase 2 (30-60 dias)',
+            description: 'Implementação das primeiras melhorias'
+          },
+          {
+            phase: 'Fase 3 (60-90 dias)',
+            description: 'Otimização e expansão dos resultados'
+          }
+        ],
+        timeline: '90 dias para resultados tangíveis'
+      };
+
+      return this.generateContentSlide(slideContent, slideSpec);
+
+    } catch (error) {
+      console.error('❌ Erro ao gerar slide de transformação:', error);
+      return this.generateFallbackSlide(slideSpec, 'Roadmap de Implementação');
+    }
+  }
+
+  /**
+   * Gera slide de fallback para casos de erro
+   */
+  generateFallbackSlide(slideSpec, defaultTitle = 'Conteúdo Personalizado') {
+    return `
+      <div class="slide content-slide" data-index="${slideSpec.index}">
+        <img class="slide-logo" src="https://i.ibb.co/QvP3HK6n/logo-darede.png" alt="Darede">
+
+        <div class="slide-header" style="margin-bottom: 2rem;">
+          <h2 style="color: var(--text-dark); text-align: center; margin-bottom: 1rem; font-size: 2.8rem; font-weight: 800;">
+            ${slideSpec.title || defaultTitle}
+          </h2>
+        </div>
+
+        <div class="slide-content" style="padding: 0 2rem;">
+          <div style="background: linear-gradient(135deg, rgba(30, 92, 63, 0.03) 0%, rgba(255, 149, 0, 0.03) 100%);
+                      border-radius: 20px; padding: 2.5rem; text-align: center;">
+            <i class="fas fa-lightbulb" style="font-size: 3rem; color: var(--primary-color); margin-bottom: 1rem;"></i>
+            <p style="font-size: 1.2rem; color: var(--text-dark); margin-bottom: 1.5rem;">
+              Conteúdo personalizado será desenvolvido com base nas informações específicas do seu briefing.
+            </p>
+            <p style="font-size: 1rem; color: var(--text-muted);">
+              Entre em contato para detalhamento completo desta seção.
+            </p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
 }
 
 module.exports = IntelligentAnalyzer;

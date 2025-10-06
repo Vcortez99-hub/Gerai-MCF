@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste do Sistema Moderno - Darede</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 2.5rem;
+            font-weight: 300;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        textarea, input, select {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 16px;
+            font-family: inherit;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        textarea::placeholder, input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #1e5c3f, #7fc88f);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(30, 92, 63, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            border-left: 4px solid #7fc88f;
+            display: none;
+        }
+
+        .error {
+            background: rgba(255, 0, 0, 0.1);
+            border-left-color: #ff4444;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .feature {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .feature i {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #7fc88f;
+        }
+
+        .loading {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #7fc88f;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Sistema Moderno de Apresentações</h1>
+
+        <form id="modernForm">
+            <div class="form-group">
+                <label for="briefing">Briefing da Apresentação:</label>
+                <textarea
+                    id="briefing"
+                    name="briefing"
+                    placeholder="Descreva o que você quer apresentar. Ex: Apresentação sobre transformação digital com IA para CEOs, destacando ROI, automação e redução de custos operacionais..."
+                    required
+                ></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="slideCount">Quantidade de Slides:</label>
+                <select id="slideCount" name="slideCount">
+                    <option value="4">4 slides</option>
+                    <option value="5">5 slides</option>
+                    <option value="6" selected>6 slides</option>
+                    <option value="7">7 slides</option>
+                    <option value="8">8 slides</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="audience">Público-Alvo:</label>
+                <select id="audience" name="audience">
+                    <option value="Executivos" selected>Executivos (C-Level)</option>
+                    <option value="Gerentes">Gerentes</option>
+                    <option value="Técnico">Equipe Técnica</option>
+                    <option value="Vendas">Equipe de Vendas</option>
+                    <option value="Investidores">Investidores</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="company">Nome da Empresa:</label>
+                <input type="text" id="company" name="company" value="Darede" placeholder="Nome da empresa">
+            </div>
+
+            <button type="submit" class="btn" id="generateBtn">
+                <i class="fas fa-magic"></i> Gerar Apresentação Moderna
+            </button>
+        </form>
+
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Gerando apresentação moderna com IA...</p>
+        </div>
+
+        <div id="result" class="result"></div>
+
+        <div class="features">
+            <div class="feature">
+                <i class="fas fa-paint-brush"></i>
+                <h3>Glassmorphism</h3>
+                <p>Efeitos visuais modernos com blur e transparência</p>
+            </div>
+            <div class="feature">
+                <i class="fas fa-rocket"></i>
+                <h3>Animações</h3>
+                <p>Transições cinematográficas entre slides</p>
+            </div>
+            <div class="feature">
+                <i class="fas fa-brain"></i>
+                <h3>IA Inteligente</h3>
+                <p>Layouts adaptativos baseados no conteúdo</p>
+            </div>
+            <div class="feature">
+                <i class="fas fa-mobile-alt"></i>
+                <h3>Responsivo</h3>
+                <p>Funciona perfeitamente em todos os dispositivos</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('modernForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const btn = document.getElementById('generateBtn');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+
+            // Coletar dados do formulário
+            const formData = {
+                briefing: document.getElementById('briefing').value,
+                config: {
+                    slideCount: parseInt(document.getElementById('slideCount').value),
+                    audience: document.getElementById('audience').value,
+                    company: document.getElementById('company').value,
+                    format: 'structured'
+                }
+            };
+
+            // Mostrar loading
+            btn.disabled = true;
+            loading.style.display = 'block';
+            result.style.display = 'none';
+
+            try {
+                console.log('Enviando dados:', formData);
+
+                const response = await fetch('/api/generate-modern', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+                console.log('Resposta recebida:', data);
+
+                if (data.success) {
+                    result.className = 'result';
+                    result.innerHTML = `
+                        <h3><i class="fas fa-check-circle"></i> Apresentação Gerada com Sucesso!</h3>
+                        <p><strong>Título:</strong> ${data.data.title}</p>
+                        <p><strong>Slides:</strong> ${data.data.slides}</p>
+                        <p><strong>Recursos:</strong> ${data.data.features.join(', ')}</p>
+                        <div style="margin-top: 20px;">
+                            <a href="${data.data.downloadUrl}" target="_blank"
+                               style="background: linear-gradient(135deg, #1e5c3f, #7fc88f); color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                                <i class="fas fa-external-link-alt"></i> Abrir Apresentação
+                            </a>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(data.error || 'Erro desconhecido');
+                }
+
+            } catch (error) {
+                console.error('Erro:', error);
+                result.className = 'result error';
+                result.innerHTML = `
+                    <h3><i class="fas fa-exclamation-triangle"></i> Erro na Geração</h3>
+                    <p>${error.message}</p>
+                `;
+            } finally {
+                // Esconder loading
+                btn.disabled = false;
+                loading.style.display = 'none';
+                result.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

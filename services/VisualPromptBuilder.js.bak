@@ -1,0 +1,794 @@
+/**
+ * VisualPromptBuilder - Geração ULTRA-VISUAL com gráficos SVG reais
+ */
+
+const ExcelProcessor = require('./ExcelProcessor');
+
+class VisualPromptBuilder {
+  static async build(briefing, config) {
+    const slideCount = parseInt(config.slideCount) || 6;
+    const company = config.company || 'Cliente';
+    const audience = config.audience || 'Executivos';
+
+    // Processar dados Excel
+    let excelDataSection = '';
+    let chartInstructions = '';
+
+    if (config.attachments && config.attachments.length > 0) {
+      const processedData = await ExcelProcessor.processAttachments(config.attachments);
+      if (processedData.hasData) {
+        excelDataSection = '\n\n' + processedData.summary;
+        chartInstructions = this.buildChartInstructions(processedData);
+        console.log(`✅ Dados processados com instruções de gráficos`);
+      }
+    }
+
+    const prompt = `Você é um DESIGNER VISUAL EXPERT criando apresentações HTML ULTRA-IMPACTANTES.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 BRIEFING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${briefing}
+${excelDataSection}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚙️ CONFIG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Empresa: ${company}
+Público: ${audience}
+Slides: ${slideCount}
+Identidade: Verde #1e5c3f, Laranja #ff9500 (detalhes)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎨 GRÁFICOS SVG OBRIGATÓRIOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${chartInstructions || this.getDefaultChartExamples()}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💎 CSS ULTRA-VISUAL (COPIE EXATAMENTE)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  overflow: hidden;
+  background: #fff;
+}
+
+.slide {
+  position: absolute;
+  width: 100vw;
+  height: 100vh;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+
+.slide.active {
+  display: flex;
+  opacity: 1;
+}
+
+/* LOGO FIXO NO TOPO */
+.slide-logo-header {
+  position: absolute;
+  top: 30px;
+  left: 50px;
+  z-index: 100;
+}
+
+.slide-logo-header img {
+  height: 50px;
+  width: auto;
+}
+
+/* HIDE LOGO HEADER ON COVER AND CONTACT */
+.slide-cover .slide-logo-header,
+.slide-contact .slide-logo-header {
+  display: none;
+}
+
+/* DATA DISCLAIMER */
+.data-disclaimer {
+  position: absolute;
+  bottom: 80px;
+  left: 50px;
+  font-size: 0.85rem;
+  color: rgba(0,0,0,0.5);
+  font-style: italic;
+}
+
+.slide-cover .data-disclaimer,
+.slide-contact .data-disclaimer {
+
+n/* LOGO FIXO NO TOPO */
+.slide-logo-header {
+  position: absolute;
+  top: 30px;
+  left: 50px;
+  z-index: 100;
+}
+
+.slide-logo-header img {
+  height: 50px;
+  width: auto;
+}
+
+  display: flex;
+  opacity: 1;
+}
+
+/* CAPA */
+.slide-cover {
+  background: linear-gradient(135deg, #1e5c3f 0%, #2d8659 100%);
+  color: white;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 60px;
+}
+
+.slide-cover h1 {
+  font-size: 4.5rem;
+  font-weight: 900;
+  margin-bottom: 1.5rem;
+  line-height: 1.1;
+  text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.slide-cover h2 {
+  font-size: 2rem;
+  font-weight: 300;
+  opacity: 0.95;
+}
+
+.slide-cover .logo {
+  width: 200px;
+  margin-bottom: 3rem;
+  filter: brightness(0) invert(1);
+}
+
+/* HERO STATS */
+.slide-hero {
+  background: white;
+  flex-direction: column;
+  padding: 80px 100px;
+}
+
+.slide-hero h1 {
+  font-size: 3rem;
+  color: #1e5c3f;
+  margin-bottom: 3rem;
+  border-bottom: 5px solid #ff9500;
+  padding-bottom: 1rem;
+  display: inline-block;
+}
+
+.hero-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  margin: 3rem 0;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, #1e5c3f 0%, #2d8659 100%);
+  padding: 3rem 2rem;
+  border-radius: 25px;
+  text-align: center;
+  box-shadow: 0 15px 40px rgba(30, 92, 63, 0.3);
+  transform: translateY(0);
+  transition: transform 0.3s;
+}
+
+.stat-card:hover {
+  transform: translateY(-10px);
+}
+
+.stat-number {
+  white-space: nowrap;
+  font-size: clamp(2.5rem, 4vw, 3.5rem);
+  font-weight: 900;
+  color: white;
+  margin-bottom: 1rem;
+}
+
+.stat-label {
+  font-size: 1.2rem;
+  color: rgba(255,255,255,0.9);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* GRÁFICO DE BARRAS SVG */
+.slide-chart {
+  background: white;
+  flex-direction: column;
+  padding: 80px 100px;
+}
+
+.slide-chart h1 {
+  font-size: 3rem;
+  color: #1e5c3f;
+  margin-bottom: 3rem;
+}
+
+.bar-chart-container {
+  margin: 2rem 0;
+}
+
+.bar-item {
+  margin-bottom: 2rem;
+}
+
+.bar-label-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.bar-label {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #2c2c2c;
+}
+
+.bar-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e5c3f;
+}
+
+.bar-track {
+  background: #e9ecef;
+  height: 50px;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+.bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1e5c3f 0%, #2d8659 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 1rem;
+  color: white;
+  font-weight: 700;
+  transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* DONUT CHART SVG */
+.donut-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4rem;
+  margin: 3rem 0;
+}
+
+.donut-chart {
+  position: relative;
+}
+
+.donut-center-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.donut-total {
+  font-size: 3rem;
+  font-weight: 900;
+  color: #1e5c3f;
+}
+
+.donut-label {
+  font-size: 1rem;
+  color: #666;
+  text-transform: uppercase;
+}
+
+.donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.legend-color {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+
+.legend-text {
+  font-size: 1.2rem;
+  color: #2c2c2c;
+}
+
+.legend-value {
+  font-weight: 700;
+  color: #1e5c3f;
+  margin-left: auto;
+}
+
+/* COMPARAÇÃO */
+.slide-comparison {
+  background: white;
+  flex-direction: column;
+  padding: 80px 100px;
+}
+
+.slide-comparison h1 {
+  font-size: 3rem;
+  color: #1e5c3f;
+  margin-bottom: 3rem;
+}
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+}
+
+.comparison-card {
+  padding: 3rem;
+  border-radius: 25px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.before-card {
+  background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);
+  border-left: 8px solid #dc3545;
+}
+
+.after-card {
+  background: linear-gradient(135deg, #f0fff4 0%, #d4edda 100%);
+  border-left: 8px solid #28a745;
+}
+
+.comparison-card h3 {
+  font-size: 2rem;
+  margin-bottom: 2rem;
+}
+
+.comparison-card ul {
+  list-style: none;
+  padding: 0;
+}
+
+.comparison-card li {
+  font-size: 1.3rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+/* CONTATO */
+.slide-contact {
+  background: white;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.contact-box {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 4rem;
+  border-radius: 30px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+
+.slide-contact .logo {
+  width: 180px;
+  margin-bottom: 3rem;
+}
+
+.slide-contact h1 {
+  font-size: 3.5rem;
+  color: #1e5c3f;
+  margin-bottom: 3rem;
+}
+
+.contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  font-size: 1.5rem;
+  color: #2c2c2c;
+  padding: 1.5rem 2rem;
+  background: white;
+  border-radius: 15px;
+  border-left: 5px solid #ff9500;
+}
+
+.contact-icon {
+  font-size: 2.5rem;
+}
+
+/* NAVEGAÇÃO */
+.navigation {
+  position: fixed;
+  bottom: 50px;
+  right: 50px;
+  display: flex;
+  gap: 20px;
+  z-index: 1000;
+}
+
+.nav-btn {
+  background: #1e5c3f;
+  color: white;
+  border: none;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  font-size: 2rem;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(30, 92, 63, 0.4);
+  transition: all 0.3s;
+}
+
+.nav-btn:hover {
+  background: #2d8659;
+  transform: scale(1.15);
+  box-shadow: 0 15px 40px rgba(30, 92, 63, 0.6);
+}
+
+.progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 6px;
+  background: linear-gradient(90deg, #1e5c3f 0%, #ff9500 100%);
+  transition: width 0.3s;
+  z-index: 9999;
+}
+
+/* ANIMAÇÕES */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(50px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.slide.active .stat-card,
+.slide.active .bar-item,
+.slide.active .comparison-card {
+  animation: slideUp 0.8s ease-out;
+}
+
+.slide.active .stat-card:nth-child(1) { animation-delay: 0.1s; }
+.slide.active .stat-card:nth-child(2) { animation-delay: 0.2s; }
+.slide.active .stat-card:nth-child(3) { animation-delay: 0.3s; }
+.slide.active .stat-card:nth-child(4) { animation-delay: 0.4s; }
+
+.slide.active .bar-fill {
+  animation: expandBar 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes expandBar {
+  from { width: 0 !important; }
+}
+
+@media (max-width: 768px) {
+  .slide-cover h1 { font-size: 2.5rem; }
+  .slide-hero, .slide-chart, .slide-comparison { padding: 40px 30px; }
+  .hero-stats { grid-template-columns: 1fr; }
+  .comparison-grid { grid-template-columns: 1fr; }
+}
+</style>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 EXEMPLOS DE SLIDES OBRIGATÓRIOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SLIDE 1 - CAPA:
+<div class="slide slide-cover active">
+  <img src="https://i.ibb.co/QvP3HK6n/logo-darede.png" class="logo">
+  <h1>[Título Impactante]</h1>
+  <h2>[Subtítulo Poderoso]</h2>
+</div>
+
+SLIDE 2 - HERO COM NÚMEROS (use dados reais):
+<div class="slide slide-hero">
+  <h1>[Título]</h1>
+  <div class="hero-stats">
+    <div class="stat-card">
+      <div class="stat-number">[Número Real]</div>
+      <div class="stat-label">[Label]</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number">[Número Real]</div>
+      <div class="stat-label">[Label]</div>
+    </div>
+    <!-- Mínimo 3 stat-cards -->
+  </div>
+</div>
+
+SLIDE 3 - GRÁFICO DE BARRAS (OBRIGATÓRIO SE HOUVER DADOS):
+<div class="slide slide-chart">
+  <h1>Análise de [Categoria]</h1>
+  <div class="bar-chart-container">
+    <div class="bar-item">
+      <div class="bar-label-row">
+        <span class="bar-label">[Item 1]</span>
+        <span class="bar-value">[Valor Real]</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width: [X]%;"></div>
+      </div>
+    </div>
+    <div class="bar-item">
+      <div class="bar-label-row">
+        <span class="bar-label">[Item 2]</span>
+        <span class="bar-value">[Valor Real]</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width: [Y]%;"></div>
+      </div>
+    </div>
+    <!-- Mínimo 4 barras com dados REAIS -->
+  </div>
+</div>
+
+SLIDE 4 - COMPARAÇÃO:
+<div class="slide slide-comparison">
+  <h1>Antes vs Depois</h1>
+  <div class="comparison-grid">
+    <div class="comparison-card before-card">
+      <h3>❌ Situação Atual</h3>
+      <ul>
+        <li>[Problema 1]</li>
+        <li>[Problema 2]</li>
+        <li>[Problema 3]</li>
+      </ul>
+    </div>
+    <div class="comparison-card after-card">
+      <h3>✅ Com Otimização</h3>
+      <ul>
+        <li>[Benefício 1]</li>
+        <li>[Benefício 2]</li>
+        <li>[Benefício 3]</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+SLIDE ${slideCount} - CONTATO:
+<div class="slide slide-contact">
+  <div class="contact-box">
+    <img src="https://i.ibb.co/QvP3HK6n/logo-darede.png" class="logo">
+    <h1>Vamos conversar?</h1>
+    <div class="contact-info">
+      <div class="contact-item">
+        <span class="contact-icon">📧</span>
+        <span>comercial@darede.com.br</span>
+      </div>
+      <div class="contact-item">
+        <span class="contact-icon">📱</span>
+        <span>+55 11 3090-1115</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔥 JAVASCRIPT NAVEGAÇÃO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<script>
+let current = 0;
+const slides = document.querySelectorAll('.slide');
+const progress = document.querySelector('.progress-bar');
+
+function show(index) {
+  slides.forEach(s => s.classList.remove('active'));
+  slides[index].classList.add('active');
+  progress.style.width = ((index + 1) / slides.length * 100) + '%';
+}
+
+function next() {
+  current = (current + 1) % slides.length;
+  show(current);
+}
+
+function prev() {
+  current = (current - 1 + slides.length) % slides.length;
+  show(current);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') next();
+  if (e.key === 'ArrowLeft') prev();
+});
+</script>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ CHECKLIST CRÍTICO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${excelDataSection ? `
+⚠️ VOCÊ TEM DADOS REAIS! OBRIGATÓRIO:
+✓ Criar GRÁFICO DE BARRAS com valores EXATOS
+✓ Usar números REAIS (não inventar)
+✓ Calcular porcentagens corretas
+✓ Mínimo 1 slide com gráfico de barras
+✓ Hero stats com números reais
+` : ''}
+✓ Copiar CSS EXATAMENTE como fornecido
+✓ Layouts VARIADOS (hero, chart, comparison)
+✓ Cores Darede (verde principal, laranja detalhes)
+✓ Animações suaves
+✓ Navegação funcional
+✓ Design ULTRA-VISUAL e impactante
+✓ Números formatados corretamente (ex: $48.521 não $48,521)
+✓ SEM data
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📤 SAÍDA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Retorne APENAS HTML completo (<!DOCTYPE html> até </html>).
+SEM markdown, SEM explicações.
+GERE APRESENTAÇÃO ULTRA-VISUAL E IMPACTANTE!`;
+
+    return prompt;
+  }
+
+  static buildChartInstructions(processedData) {
+    let instructions = '\n\n⚠️ DADOS DISPONÍVEIS PARA GRÁFICOS:\n\n';
+
+    processedData.structuredData.forEach(data => {
+      if (data.type === 'excel' && data.numericAnalysis) {
+        Object.entries(data.numericAnalysis).forEach(([sheet, stats]) => {
+          const columns = Object.keys(stats);
+          if (columns.length > 0) {
+            instructions += `📊 CRIE GRÁFICO DE BARRAS para "${sheet}":\n`;
+
+            columns.slice(0, 5).forEach(col => {
+              const colData = stats[col];
+              instructions += `- ${col}: valor máximo ${colData.max}, média ${colData.average.toFixed(2)}\n`;
+            });
+
+            instructions += '\nEXEMPLO DE CÓDIGO:\n';
+            instructions += '<div class="slide slide-chart">\n';
+            instructions += `  <h1>Análise de ${sheet}</h1>\n`;
+            instructions += '  <div class="bar-chart-container">\n';
+
+            // Pegar primeiras 5 colunas para exemplo
+            columns.slice(0, 5).forEach(col => {
+              const colData = stats[col];
+              const percentage = (colData.average / colData.max * 100).toFixed(0);
+              instructions += `    <div class="bar-item">\n`;
+              instructions += `      <div class="bar-label-row">\n`;
+              instructions += `        <span class="bar-label">${col}</span>\n`;
+              instructions += `        <span class="bar-value">${colData.average.toFixed(2)}</span>\n`;
+              instructions += `      </div>\n`;
+              instructions += `      <div class="bar-track">\n`;
+              instructions += `        <div class="bar-fill" style="width: ${percentage}%;"></div>\n`;
+              instructions += `      </div>\n`;
+              instructions += `    </div>\n`;
+            });
+
+            instructions += '  </div>\n';
+            instructions += '</div>\n\n';
+          }
+        });
+      }
+    });
+
+    return instructions;
+  }
+
+  static getDefaultChartExamples() {
+    return `
+EXEMPLO DE GRÁFICO DE BARRAS (copie e adapte com seus dados):
+
+<div class="slide slide-chart">
+  <h1>Top 5 Custos Operacionais</h1>
+  <div class="bar-chart-container">
+    <div class="bar-item">
+      <div class="bar-label-row">
+        <span class="bar-label">Infraestrutura Cloud</span>
+        <span class="bar-value">R$ 125.000</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width: 100%;"></div>
+      </div>
+    </div>
+    <div class="bar-item">
+      <div class="bar-label-row">
+        <span class="bar-label">Licenças Software</span>
+        <span class="bar-value">R$ 85.000</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width: 68%;"></div>
+      </div>
+    </div>
+    <!-- Adicione mais barras -->
+  </div>
+</div>`;
+  }
+
+  static validateResponse(html) {
+    const validations = {
+      hasDoctype: html.trim().toLowerCase().startsWith('<!doctype html'),
+      hasHtmlTag: html.includes('<html') && html.includes('</html>'),
+      hasHead: html.includes('<head>') && html.includes('</head>'),
+      hasBody: html.includes('<body>') && html.includes('</body>'),
+      hasChart: html.includes('bar-chart') || html.includes('donut-chart') || html.includes('stat-card'),
+      hasStats: html.includes('stat-number') && html.includes('stat-label'),
+      hasDaredeLogo: html.includes('logo-darede.png'),
+      hasDaredeColors: html.includes('#1e5c3f'),
+      hasAnimation: html.includes('animation') || html.includes('@keyframes'),
+      minLength: html.length > 7000,
+      noMarkdown: !html.includes('```'),
+      noDate: !html.includes(new Date().toLocaleDateString('pt-BR')),
+    };
+
+    const passed = Object.values(validations).filter(v => v).length;
+    const total = Object.keys(validations).length;
+    const score = (passed / total) * 100;
+
+    return {
+      valid: score >= 80,
+      score: Math.round(score),
+      details: validations,
+      errors: this.getValidationErrors(validations)
+    };
+  }
+
+  static getValidationErrors(validations) {
+    const errors = [];
+    if (!validations.hasDoctype) errors.push('Faltando <!DOCTYPE html>');
+    if (!validations.hasHtmlTag) errors.push('Estrutura HTML incompleta');
+    if (!validations.hasHead) errors.push('Faltando <head>');
+    if (!validations.hasBody) errors.push('Faltando <body>');
+    if (!validations.hasChart) errors.push('Faltando gráficos visuais');
+    if (!validations.hasStats) errors.push('Faltando stat cards');
+    if (!validations.hasDaredeLogo) errors.push('Logo Darede não encontrado');
+    if (!validations.hasDaredeColors) errors.push('Cores Darede não aplicadas');
+    if (!validations.hasAnimation) errors.push('Faltando animações');
+    if (!validations.minLength) errors.push('HTML muito curto');
+    if (!validations.noMarkdown) errors.push('Contém markdown');
+    if (!validations.noDate) errors.push('Contém data');
+    return errors;
+  }
+
+  static cleanResponse(response) {
+    let cleaned = response.replace(/```html\n?/gi, '').replace(/```\n?/g, '');
+
+    if (!cleaned.trim().startsWith('<!DOCTYPE') && !cleaned.trim().startsWith('<html')) {
+      const htmlMatch = response.match(/<!DOCTYPE html>[\s\S]*?<\/html>/i);
+      if (htmlMatch) {
+        cleaned = htmlMatch[0];
+      }
+    }
+
+    return cleaned.trim();
+  }
+}
+
+module.exports = VisualPromptBuilder;

@@ -14,7 +14,7 @@ class OpenAIService {
       this.openai = new OpenAI({
         apiKey: process.env.OPENAI_API_KEY
       });
-      this.model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+      this.model = process.env.OPENAI_MODEL || 'gpt-4o';
     } else {
       // Fallback to simple AI if no OpenAI key
       this.provider = 'simple';
@@ -79,7 +79,7 @@ class OpenAIService {
       messages: [
         {
           role: "system",
-          content: "You are GPT-4o-mini, an advanced AI model. Create professional HTML presentations with complete, valid HTML documents. Generate full HTML structure with embedded CSS and JavaScript. Focus on modern design, responsive layout, and professional business presentations."
+          content: "You are an advanced AI model. Create exceptional HTML presentations with complete, valid HTML documents. Generate full HTML structure with embedded CSS and JavaScript. Focus on ultra-modern design, responsive layout, interactive elements, and enterprise-grade business presentations with advanced animations and data visualizations."
         },
         {
           role: "user",
@@ -167,7 +167,7 @@ class OpenAIService {
       '- Font: Inter, sans-serif\n' +
       '- Cores: Verde (#1e5c3f), Laranja (#ff9500)\n' +
       '- Background: #ffffff\n' +
-      '- Logo: https://lps-geral.s3.us-east-1.amazonaws.com/agente-ia-empresas/assets/logo-darede-white.png\n\n' +
+      '- Logo: https://i.ibb.co/QvP3HK6n/logo-darede.png\n\n' +
       '⚠️ **CONTRASTE OBRIGATÓRIO:**\n' +
       '- Fundos brancos = texto escuro (#2c2c2c)\n' +
       '- Fundos coloridos = texto branco (#ffffff)\n' +
@@ -198,7 +198,91 @@ class OpenAIService {
   // generateHTMLFallback implementado na linha 1746
   // generateSimple implementado na linha 1815
 
-    return objective + briefingSection + configSection + templateHeader;
+  // Implementação completa da função buildPrompt estava corrompida
+  // Versão simplificada para evitar erros:
+  async buildPrompt(briefing, config) {
+    const slideCount = parseInt(config.slideCount) || 6;
+    const audience = config.audience || 'Executivos';
+    const company = config.company || 'Cliente';
+
+    const prompt = `🏛️ **C-SUITE EXECUTIVE PRESENTATION CREATION**
+
+You are creating a **BOARD-LEVEL EXECUTIVE PRESENTATION** for Fortune 500 standards.
+Target audience: CEOs, CFOs, CTOs, Board Members, Senior Executives.
+
+**📊 EXECUTIVE BRIEFING:**
+${briefing}
+
+**🎯 EXECUTIVE SPECIFICATIONS:**
+- Audience: ${audience} (C-Suite Level)
+- Client: ${company}
+- Presentation Scope: ${slideCount} slides
+- Quality Standard: McKinsey/BCG/Bain Level
+
+**🏢 CORPORATE DESIGN STANDARDS (DAREDE):**
+- Primary Palette: Deep Forest (#1e5c3f), Executive Orange (#ff9500), Pure White (#ffffff)
+- Corporate Logo: https://i.ibb.co/QvP3HK6n/logo-darede.png
+- Typography: 'Inter' (Enterprise font stack)
+- Design Philosophy: Ultra-sophisticated, boardroom-ready, institutional-grade
+
+**💼 EXECUTIVE-GRADE REQUIREMENTS:**
+1. **Sophisticated Animations**: Subtle, professional transitions worthy of boardrooms
+2. **Premium Microinteractions**: Refined hover states, executive-level feedback
+3. **Enterprise Data Visualization**: McKinsey-style charts, BCG-quality analytics
+4. **C-Suite Dashboard**: Executive KPIs, financial metrics, strategic indicators
+5. **Professional SVG Graphics**: Investment-grade charts with institutional styling
+6. **Responsive Excellence**: Flawless rendering on executive devices (iPad Pro, Surface)
+7. **Executive Navigation**: Intuitive, sophisticated, boardroom-appropriate
+8. **Corporate Visual Elements**: Institutional gradients, executive shadows, premium depth
+9. **Professional Typography**: C-Suite hierarchy, perfect readability, executive spacing
+10. **Strategic Data Stories**: Insights that drive executive decision-making
+
+**📊 SLIDE STRUCTURE:**
+- Slide 1: Capa impactante com animação de entrada
+- Slides 2-${slideCount-1}: Conteúdo baseado no briefing com visualizações
+- Slide ${slideCount}: Contato estilizado (comercial@darede.com.br, +55 11 3090-1115)
+
+**📊 EXECUTIVE ANALYTICS SPECIFICATIONS:**
+- **Enterprise Sankey Diagrams**: Investment-grade flow visualizations with institutional styling
+- **Executive Donut Charts**: Boardroom-quality circular analytics with sophisticated animations
+- **Strategic Bar Charts**: C-Suite level comparative analysis with professional gradients
+- **Executive Metric Cards**: Financial KPIs with institutional icons and premium styling
+- **Corporate Dashboard**: McKinsey-style grid layouts with executive-grade spacing
+- **Professional SVG Elements**: Investment-banking quality filters, shadows, gradients
+- **Strategic Data Integration**: Real financial data with executive-level insights
+- **Institutional Color Palette**: Conservative, professional, trustworthy color schemes
+- **Executive Typography**: Perfect hierarchy, institutional font weights, C-Suite readability
+
+**🏛️ INSTITUTIONAL TECHNICAL STANDARDS:**
+- **Enterprise HTML5**: Semantic, accessible, boardroom-grade markup
+- **Investment-Grade CSS3**: Custom properties, institutional design systems
+- **Executive JavaScript**: Sophisticated interactions, professional user experience
+- **C-Suite Performance**: Optimized for executive devices and presentation systems
+- **Corporate Accessibility**: Full ARIA compliance for inclusive boardrooms
+- **Professional SVG**: Institutional definitions, executive gradients, corporate filters
+- **Strategic Layouts**: CSS Grid and Flexbox for executive-level precision
+- **Boardroom Animations**: Sophisticated keyframes, professional transitions
+
+**🎯 EXECUTIVE DELIVERABLE REQUIREMENTS:**
+- **NO amateur emoji icons** - Use professional SVG icons only
+- **NO casual language** - Executive terminology and business vocabulary
+- **NO bright/playful colors** - Conservative, institutional color palette
+- **NO cartoon-style graphics** - Investment-grade, professional visualizations
+- **CONSERVATIVE typography** - Institutional font weights and hierarchies
+- **SOPHISTICATED animations** - Subtle, boardroom-appropriate transitions
+- **EXECUTIVE data presentation** - Financial-grade accuracy and professionalism
+
+**🏢 FINAL OUTPUT SPECIFICATION:**
+Return ONLY complete, valid HTML code without markdown or explanations.
+Create a **BOARD-LEVEL PRESENTATION** that would be appropriate for:
+- Fortune 500 board meetings
+- C-Suite strategic presentations
+- Institutional investor briefings
+- McKinsey/BCG/Bain consulting standards
+
+Use your full capability to create something of **INSTITUTIONAL EXCELLENCE**!`;
+
+    return prompt;
   }
 
   parseAIResponse(response, config) {
@@ -309,11 +393,11 @@ class OpenAIService {
 </head>
 <body>
     <div class="container">
-        <img src="https://lps-geral.s3.us-east-1.amazonaws.com/agente-ia-empresas/assets/logo-darede-white.png" alt="Darede" class="logo">
+        <img src="https://i.ibb.co/QvP3HK6n/logo-darede.png" alt="Darede" class="logo">
         <h1>${title}</h1>
         <div class="content">
             <h2>Apresentação OpenAI em Desenvolvimento</h2>
-            <p>Esta é uma apresentação personalizada gerada com OpenAI GPT-4o-mini.</p>
+            <p>Esta é uma apresentação personalizada gerada com OpenAI GPT-4o.</p>
             <p><strong>Empresa:</strong> ${company || 'Cliente'}</p>
             <p><strong>Público:</strong> ${audience || 'Executivos'}</p>
             ${briefing ? `<p><strong>Briefing:</strong> ${briefing.substring(0, 200)}...</p>` : ''}

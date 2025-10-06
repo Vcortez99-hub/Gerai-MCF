@@ -125,7 +125,7 @@ const OpenAIService = require('./services/OpenAIService');
 const SupabaseAuthService = require('./services/SupabaseAuthService');
 const PresentationHistoryService = require('./services/PresentationHistoryService');
 const PresentationService = require('./services/PresentationService');
-const ModernPresentationGenerator = require('./src/scripts/modern-generator');
+// ModernPresentationGenerator removed during cleanup
 
 // Import Middleware
 const { authenticateUser, optionalAuth } = require('./middleware/auth');
@@ -718,8 +718,8 @@ app.post('/api/generate-modern', optionalAuth, async (req, res) => {
         const historyEntry = await PresentationHistoryService.savePresentation(req.userId, {
           title: aiContent.data.title || 'Apresentação Moderna',
           briefing,
-          templateId: 'modern-generator',
-          templateName: 'Gerador Moderno',
+          templateId: 'optimized-utility-generator',
+          templateName: 'Gerador Otimizado de Apresentações Úteis',
           config,
           aiContent: aiContent.data,
           generatedFilePath: filePath,
@@ -1095,6 +1095,9 @@ app.get('/api/history/recent/:limit?', authenticateUser, async (req, res) => {
     });
   }
 });
+// Rotas de análise em 2 etapas (estilo Gamma.ai)
+const analyzeRoutes = require("./routes/analyze");
+app.use("/api", analyzeRoutes);
 
 // 404 handler
 app.use((req, res) => {
