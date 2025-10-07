@@ -33,47 +33,61 @@ class OpenAIService {
       };
 
     } catch (error) {
-      console.error('Erro:', error.message);
-
-      return {
-        success: true,
-        data: this.generateHTMLFallback(config)
-      };
+      console.error('\n❌ ERRO FATAL:', error.message);
+      throw error;
     }
   }
 
   async generateWithOpenAI(briefing, config) {
-    console.log('Gerando com OpenAI...');
+    console.log('\n━━━ INICIANDO GERAÇÃO COM OPENAI ━━━');
 
     const prompt = await VisualPromptBuilder.build(briefing, config);
+    const slideCount = parseInt(config.slideCount) || 6;
+
+    console.log('📤 Slides solicitados:', slideCount);
+    console.log('📤 Tamanho do prompt:', prompt.length, 'chars');
+
+    const systemMessage = `Você é um designer expert de apresentações HTML.
+
+🎯 MISSÃO CRÍTICA: Criar EXATAMENTE ${slideCount} slides completos.
+
+REGRAS:
+1. Criar TODOS os ${slideCount} slides (não apenas 1!)
+2. Cada slide: <section class="slide" data-slide="N"> onde N = 1 até ${slideCount}
+3. Retornar APENAS HTML de <!DOCTYPE html> até </html>
+4. SEM markdown, SEM explicações
+5. Cores: #1e5c3f, #ff9500
+6. SEM datas
+
+IMPORTANTE: Use todos os tokens disponíveis!`;
 
     const response = await this.openai.chat.completions.create({
       model: this.model,
       messages: [
-        {
-          role: "system",
-          content: "Você é especialista em criar apresentações HTML profissionais. Retorne APENAS código HTML válido."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
+        { role: "system", content: systemMessage },
+        { role: "user", content: prompt }
       ],
       temperature: 0.7,
-      max_tokens: 16000
+      max_tokens: 16384
     });
 
     const rawContent = response.choices[0].message.content;
-    console.log('Resposta:', rawContent.length, 'chars');
+
+    console.log('📥 Resposta:', rawContent.length, 'chars');
+    console.log('📥 Finish:', response.choices[0].finish_reason);
+    console.log('📥 Tokens:', response.usage.completion_tokens, '/', response.usage.total_tokens);
 
     const cleanedHTML = VisualPromptBuilder.cleanResponse(rawContent);
-    const validation = VisualPromptBuilder.validateResponse(cleanedHTML);
+    const slideCountGenerated = (cleanedHTML.match(/<section[^>]*class="slide"/gi) || []).length;
 
-    console.log('Validação:', validation.score + '%');
+    console.log('📊 Slides gerados:', slideCountGenerated, '/', slideCount);
 
-    if (validation.errors.length > 0) {
-      console.warn('Erros:', validation.errors);
+    if (slideCountGenerated < slideCount) {
+      console.error(`❌ PROBLEMA: ${slideCountGenerated} slides de ${slideCount}!`);
     }
+
+    const validation = VisualPromptBuilder.validateResponse(cleanedHTML);
+    console.log('📊 Validação:', validation.score + '%\n');
 
     return {
       html: cleanedHTML,
@@ -84,7 +98,8 @@ class OpenAIService {
       config,
       provider: this.provider,
       model: this.model,
-      validation
+      validation,
+      slideCountGenerated
     };
   }
 

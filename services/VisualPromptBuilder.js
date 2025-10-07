@@ -251,15 +251,88 @@ linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)
 📤 OUTPUT ESPERADO
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+⚠️ **CRÍTICO: VOCÊ DEVE CRIAR EXATAMENTE ${slideCount} SLIDES!**
+
+NÃO crie apenas 1 slide de capa! CRIE TODOS OS ${slideCount} SLIDES SOLICITADOS!
+
+Estrutura HTML obrigatória:
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Apresentação</title>
+  <style>
+    /* CSS aqui */
+  </style>
+</head>
+<body>
+  <section class="slide" data-slide="1">
+    <!-- SLIDE 1: COVER -->
+  </section>
+
+  <section class="slide" data-slide="2">
+    <!-- SLIDE 2: Conteúdo 1 -->
+  </section>
+
+  <section class="slide" data-slide="3">
+    <!-- SLIDE 3: Conteúdo 2 -->
+  </section>
+
+  <!-- Continue criando slides até ${slideCount} -->
+
+  <section class="slide" data-slide="${slideCount}">
+    <!-- SLIDE ${slideCount}: FINAL/CONTACT -->
+  </section>
+
+  <script>
+    // Sistema de navegação entre slides
+    let currentSlide = 1;
+    const slides = document.querySelectorAll('.slide');
+    const totalSlides = slides.length;
+
+    function showSlide(n) {
+      if (n > totalSlides) currentSlide = 1;
+      if (n < 1) currentSlide = totalSlides;
+
+      slides.forEach(s => s.style.display = 'none');
+      slides[currentSlide - 1].style.display = 'flex';
+    }
+
+    function nextSlide() { currentSlide++; showSlide(currentSlide); }
+    function prevSlide() { currentSlide--; showSlide(currentSlide); }
+
+    // Navegação: setas, espaço, clique
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); prevSlide(); }
+    });
+
+    document.addEventListener('click', (e) => {
+      e.clientX > window.innerWidth / 2 ? nextSlide() : prevSlide();
+    });
+
+    showSlide(currentSlide);
+  </script>
+</body>
+</html>
+
+CHECKLIST ANTES DE RETORNAR:
+✓ Criar exatamente ${slideCount} tags <section class="slide">
+✓ Cada slide tem data-slide="N" de 1 até ${slideCount}
+✓ Cada slide tem conteúdo único e relevante
+✓ Narrativa faz sentido do início ao fim
+✓ HTML completo de <!DOCTYPE> até </html>
+
+PASSOS:
 1. Analise o briefing e dados
 2. Escolha narrativa e estilo visual
-3. Crie slides únicos e impactantes
+3. **CRIE TODOS OS ${slideCount} SLIDES** únicos e impactantes
 4. Retorne APENAS HTML completo
 5. De <!DOCTYPE html> até </html>
-6. SEM markdown, SEM explicações
+6. SEM markdown, SEM explicações, SEM texto antes/depois do HTML
 7. Código pronto para uso imediato
 
-CRIE UMA APRESENTAÇÃO QUE FAÇA O CLIENTE DIZER:
+CRIE UMA APRESENTAÇÃO COM ${slideCount} SLIDES QUE FAÇA O CLIENTE DIZER:
 "WOW, isso é diferente de tudo que já vi!"
 
 GO! 🚀`;

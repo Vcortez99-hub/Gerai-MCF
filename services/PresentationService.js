@@ -16,6 +16,14 @@ class PresentationService {
   }
 
   async generatePresentation(templateId, config, aiContent) {
+    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🚀 INICIANDO GERAÇÃO');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📋 Config:', JSON.stringify(config, null, 2));
+    console.log('🎨 AI Content Type:', aiContent.type);
+
+    const startTime = Date.now();
+
     try {
       console.log('🎯 Generating presentation with type:', aiContent.type);
 
@@ -26,6 +34,7 @@ class PresentationService {
         // HTML completo gerado diretamente pela IA
         finalHTML = aiContent.html;
         console.log('✨ Using complete HTML from AI');
+        console.log(`📝 HTML length: ${finalHTML ? finalHTML.length : 0} characters`);
       } else {
         // Método antigo - processar template com JSON
         const template = await this.loadTemplate(templateId);
@@ -54,7 +63,7 @@ class PresentationService {
         title: aiContent.title || 'Apresentação Gerada'
       });
 
-      return {
+      const result = {
         id: presentationId,
         title: aiContent.title || 'Apresentação Gerada',
         path: outputPath,
@@ -62,7 +71,19 @@ class PresentationService {
         preview: await this.generatePreview(outputPath),
         metadata
       };
+
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.log(`\n✅ Apresentação gerada com sucesso!`);
+      console.log(`📊 ID: ${presentationId}`);
+      console.log(`📄 Title: ${result.title}`);
+      console.log(`🔗 URL: ${result.url}`);
+      console.log(`⏱️  Tempo total: ${elapsed}s`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+
+      return result;
     } catch (error) {
+      console.error('\n❌ ERRO NA GERAÇÃO:', error.message);
+      console.error('Stack:', error.stack);
       throw new Error(`Erro ao gerar apresentação: ${error.message}`);
     }
   }
