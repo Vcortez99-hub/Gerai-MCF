@@ -128,7 +128,6 @@ class PresentationHistoryService {
           title: title || 'Apresentação Sem Título',
           briefing,
           template_id: templateId,
-          template_name: templateName,
           config: config || {},
           ai_content: aiContent,
           generated_file_path: generatedFilePath,
@@ -170,9 +169,8 @@ class PresentationHistoryService {
           title,
           briefing,
           template_id,
-          template_name,
           config,
-          generated_file_url,
+          generated_file_path,
           status,
           generation_time_ms,
           created_at,
@@ -338,7 +336,6 @@ class PresentationHistoryService {
           title: title || 'Apresentação (Falha)',
           briefing,
           template_id: templateId,
-          template_name: templateName,
           config: config || {},
           ai_content: { error: errorMessage },
           status: 'failed'
@@ -366,7 +363,7 @@ class PresentationHistoryService {
         .select(`
           id,
           title,
-          template_name,
+          template_id,
           status,
           created_at
         `)

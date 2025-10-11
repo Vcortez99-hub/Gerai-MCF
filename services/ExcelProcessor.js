@@ -1,8 +1,9 @@
 /**
- * ExcelProcessor - Processamento robusto de arquivos Excel para análise por IA
+ * ExcelProcessor - Processamento robusto de arquivos Excel e PDFs para análise por IA
  */
 
 const XLSX = require('xlsx');
+const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
 
 class ExcelProcessor {
   /**
@@ -23,11 +24,16 @@ class ExcelProcessor {
       try {
         // Verificar se é Excel
         const isExcel = this.isExcelFile(attachment);
+        const isPDF = this.isPDFFile(attachment);
 
         if (isExcel) {
           const excelData = await this.processExcelAttachment(attachment);
           results.push(excelData);
           fullSummary += excelData.summary + '\n\n';
+        } else if (isPDF) {
+          const pdfData = await this.processPDFAttachment(attachment);
+          results.push(pdfData);
+          fullSummary += pdfData.summary + '\n\n';
         } else if (attachment.content) {
           // Arquivo de texto
           results.push({
@@ -69,6 +75,90 @@ class ExcelProcessor {
     }
 
     return false;
+  }
+
+  /**
+   * Verifica se é arquivo PDF
+   */
+  static isPDFFile(attachment) {
+    if (attachment.name) {
+      const name = attachment.name.toLowerCase();
+      if (name.endsWith('.pdf')) {
+        return true;
+      }
+    }
+
+    if (attachment.type) {
+      const type = attachment.type.toLowerCase();
+      if (type.includes('pdf')) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Processa arquivo PDF e extrai texto
+   */
+  static async processPDFAttachment(attachment) {
+    console.log('📄 Processando PDF e extraindo texto...');
+
+    try {
+      // Decodificar base64
+      let buffer;
+      if (attachment.url && attachment.url.startsWith('data:')) {
+        const base64Data = attachment.url.split(',')[1];
+        buffer = Buffer.from(base64Data, 'base64');
+      } else if (attachment.buffer) {
+        buffer = attachment.buffer;
+      } else {
+        throw new Error('Formato de anexo não suportado');
+      }
+
+      // Extrair texto do PDF usando pdfjs-dist
+      // Converter Buffer para Uint8Array
+      const uint8Array = new Uint8Array(buffer);
+      const loadingTask = pdfjsLib.getDocument({ data: uint8Array });
+      const pdfDocument = await loadingTask.promise;
+      const pageCount = pdfDocument.numPages;
+
+      let fullText = '';
+      for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
+        const page = await pdfDocument.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map(item => item.str).join(' ');
+        fullText += pageText + '\n\n';
+      }
+
+      console.log(`📄 PDF processado: ${pageCount} páginas, ${fullText.length} caracteres`);
+
+      const summary = `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📄 CONTEÚDO DO PDF: ${attachment.name || 'Documento'}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📑 Páginas: ${pageCount}
+📝 Total de caracteres: ${fullText.length}
+
+⚠️⚠️⚠️ IMPORTANTE: USE ESTE CONTEÚDO NA APRESENTAÇÃO! ⚠️⚠️⚠️
+
+━━━ CONTEÚDO COMPLETO DO PDF ━━━
+
+${fullText}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+
+      return {
+        type: 'pdf',
+        name: attachment.name,
+        content: fullText,
+        pageCount: pageCount,
+        summary: summary
+      };
+    } catch (error) {
+      console.error('❌ Erro ao processar PDF:', error.message);
+      throw error;
+    }
   }
 
   /**

@@ -47,19 +47,26 @@ class OpenAIService {
     console.log('📤 Slides solicitados:', slideCount);
     console.log('📤 Tamanho do prompt:', prompt.length, 'chars');
 
-    const systemMessage = `Você é um designer expert de apresentações HTML.
+    const systemMessage = `Você é um DESIGNER DE EXPERIÊNCIAS VISUAIS expert especializado em criar apresentações HTML impactantes e memoráveis.
 
-🎯 MISSÃO CRÍTICA: Criar EXATAMENTE ${slideCount} slides completos.
+🎯 MISSÃO CRÍTICA:
+Criar EXATAMENTE ${slideCount} slides completos, cada um ÚNICO e IMPACTANTE.
 
-REGRAS:
-1. Criar TODOS os ${slideCount} slides (não apenas 1!)
-2. Cada slide: <section class="slide" data-slide="N"> onde N = 1 até ${slideCount}
-3. Retornar APENAS HTML de <!DOCTYPE html> até </html>
-4. SEM markdown, SEM explicações
-5. Cores: #1e5c3f, #ff9500
-6. SEM datas
+⚠️ REGRA ABSOLUTA:
+VOCÊ DEVE GERAR **TODOS OS ${slideCount} SLIDES** NO HTML.
+NÃO pare após 1 ou 2 slides! Continue até completar TODOS os ${slideCount} slides!
 
-IMPORTANTE: Use todos os tokens disponíveis!`;
+FORMATO DE SAÍDA:
+- Retorne APENAS código HTML válido
+- De <!DOCTYPE html> até </html>
+- SEM markdown (\`\`\`), SEM explicações
+- TODOS os ${slideCount} slides devem estar no mesmo arquivo HTML
+- Cada slide: <section class="slide" data-slide="N"> onde N vai de 1 até ${slideCount}
+
+IMPORTANTE:
+- Você tem 16384 tokens disponíveis - USE TODOS!
+- Não economize! Crie os ${slideCount} slides completos!
+- Siga EXATAMENTE as diretrizes de design do prompt do usuário!`;
 
     const response = await this.openai.chat.completions.create({
       model: this.model,
@@ -68,7 +75,7 @@ IMPORTANTE: Use todos os tokens disponíveis!`;
         { role: "user", content: prompt }
       ],
       temperature: 0.7,
-      max_tokens: 16384
+      max_completion_tokens: 16384
     });
 
     const rawContent = response.choices[0].message.content;
@@ -84,6 +91,10 @@ IMPORTANTE: Use todos os tokens disponíveis!`;
 
     if (slideCountGenerated < slideCount) {
       console.error(`❌ PROBLEMA: ${slideCountGenerated} slides de ${slideCount}!`);
+      console.log('🔄 Tentando regenerar com prompt mais enfático...');
+
+      // Retry com prompt mais direto
+      return this.retryGeneration(briefing, config, slideCount);
     }
 
     const validation = VisualPromptBuilder.validateResponse(cleanedHTML);
@@ -100,6 +111,64 @@ IMPORTANTE: Use todos os tokens disponíveis!`;
       model: this.model,
       validation,
       slideCountGenerated
+    };
+  }
+
+  async retryGeneration(briefing, config, slideCount) {
+    console.log('🔄 RETRY: Gerando novamente com prompt COMPLETO...');
+
+    // Usar o prompt completo do VisualPromptBuilder novamente
+    const fullPrompt = await VisualPromptBuilder.build(briefing, config);
+
+    const enhancedSystemMessage = `Você é um DESIGNER DE EXPERIÊNCIAS VISUAIS expert.
+
+⚠️⚠️⚠️ ATENÇÃO CRÍTICA ⚠️⚠️⚠️
+
+Você FALHOU na primeira tentativa porque gerou apenas ${slideCount < 6 ? slideCount : 1} slide(s).
+
+AGORA você DEVE gerar TODOS OS ${slideCount} SLIDES!
+
+ANTES de começar a escrever o HTML, PLANEJE mentalmente:
+1. Slide 1: Capa impactante
+2. Slide 2: [baseado no briefing]
+3. Slide 3: [baseado no briefing]
+... continue até o slide ${slideCount}
+
+DEPOIS, escreva o HTML COMPLETO com TODOS os ${slideCount} slides.
+
+NÃO pare de escrever até ter criado TODOS os ${slideCount} slides!
+
+Use TODOS os 16384 tokens disponíveis!
+
+Siga EXATAMENTE as diretrizes visuais e de design do prompt!`;
+
+    const response = await this.openai.chat.completions.create({
+      model: this.model,
+      messages: [
+        { role: "system", content: enhancedSystemMessage },
+        { role: "user", content: fullPrompt }
+      ],
+      temperature: 0.8,
+      max_completion_tokens: 16384
+    });
+
+    const cleanedHTML = VisualPromptBuilder.cleanResponse(response.choices[0].message.content);
+    const generatedCount = (cleanedHTML.match(/<section[^>]*class="slide"/gi) || []).length;
+
+    console.log('🔄 RETRY Resultado:', generatedCount, '/', slideCount, 'slides');
+
+    return {
+      html: cleanedHTML,
+      htmlContent: cleanedHTML,
+      title: this.extractTitleFromHTML(cleanedHTML),
+      type: 'complete-html',
+      generatedAt: new Date().toISOString(),
+      config,
+      provider: this.provider,
+      model: this.model,
+      slideCountGenerated: generatedCount,
+      wasRetry: true,
+      validation: VisualPromptBuilder.validateResponse(cleanedHTML)
     };
   }
 

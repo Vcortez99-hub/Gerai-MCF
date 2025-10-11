@@ -122,10 +122,12 @@ class TemplateService {
 // Import Services
 const ClaudeAIService = require('./services/ClaudeAIService');
 const OpenAIService = require('./services/OpenAIService');
+const AIService = require('./services/AIService');
 const SupabaseAuthService = require('./services/SupabaseAuthService');
 const PresentationHistoryService = require('./services/PresentationHistoryService');
 const PresentationService = require('./services/PresentationService');
-// ModernPresentationGenerator removed during cleanup
+const ExcelProcessor = require('./services/ExcelProcessor');
+const VisualPromptBuilder = require('./services/VisualPromptBuilder');
 
 // Import Middleware
 const { authenticateUser, optionalAuth } = require('./middleware/auth');
@@ -671,35 +673,18 @@ app.post('/api/generate-modern', optionalAuth, async (req, res) => {
     console.log(`✅ Conteúdo AI estruturado gerado`);
     console.log('📊 Debug - aiContent.data:', JSON.stringify(aiContent.data, null, 2));
 
-    // 2. Usar novo gerador moderno
-    const modernGenerator = new ModernPresentationGenerator();
+    // 2. Gerar HTML usando AIService (mesmo padrão do /api/generate-pptx)
+    const slideCount = parseInt(config.slideCount) || 7;
+    const audience = config.audience || 'executivos';
+    const company = config.company || 'Empresa';
 
-    // Converter conteúdo AI em slides estruturados
-    const slides = [];
-    if (aiContent.data.slides && Array.isArray(aiContent.data.slides)) {
-      aiContent.data.slides.forEach(slide => {
-        slides.push({
-          content: slide.content || slide.title || '',
-          title: slide.title || '',
-          type: slide.type || 'content'
-        });
-      });
-    } else {
-      // Fallback: usar conteúdo direto
-      const lines = briefing.split('\n').filter(line => line.trim());
-      lines.forEach((line, index) => {
-        slides.push({
-          content: line,
-          title: `Slide ${index + 1}`,
-          type: index === 0 ? 'title' : 'content'
-        });
-      });
-    }
-
-    console.log('📋 Debug - slides processados:', JSON.stringify(slides, null, 2));
-
-    // 3. Gerar apresentação com sistema moderno
-    const presentationHtml = modernGenerator.generatePresentation(slides);
+    const aiResponse = await AIService.generatePresentation(briefing, {
+      slideCount,
+      audience,
+      company,
+      attachments: []
+    });
+    const presentationHtml = aiResponse.html;
 
     // 4. Salvar arquivo
     const presentationId = `pres_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -743,7 +728,7 @@ app.post('/api/generate-modern', optionalAuth, async (req, res) => {
         historyId,
         title: aiContent.data.title || 'Apresentação Moderna',
         generatedAt: new Date().toISOString(),
-        slides: slides.length,
+        slides: slideCount,
         features: [
           'Glassmorphism effects',
           'Animações cinematográficas',
@@ -952,6 +937,227 @@ app.use((error, req, res, next) => {
     success: false,
     error: 'Erro interno do servidor'
   });
+});
+
+// ===== HTML to PPTX GENERATION (PROFISSIONAL) =====
+const HTMLtoPPTXService = require('./services/HTMLtoPPTXService');
+
+app.post('/api/generate-pptx', optionalAuth, async (req, res) => {
+  try {
+    const { briefing, config = {}, attachments = [] } = req.body;
+
+    if (!briefing) {
+      return res.status(400).json({
+        success: false,
+        error: 'Briefing é obrigatório'
+      });
+    }
+
+    console.log('📊 Gerando PPTX profissional (HTML → Screenshots)...');
+
+    // PASSO 1: Gerar HTML usando lógica interna (mesmo código do /api/generate-modern)
+    const slideCount = parseInt(config.slideCount) || 7;
+    const audience = config.audience || 'executivos';
+    const company = config.company || 'Empresa';
+
+    let processedData = { hasData: false, summary: '' };
+    if (attachments && attachments.length > 0) {
+      processedData = await ExcelProcessor.processAttachments(attachments);
+    }
+
+    const aiResponse = await AIService.generatePresentation(briefing, {
+      slideCount,
+      audience,
+      company,
+      attachments: attachments || []
+    });
+    const finalHTML = aiResponse.html;
+
+    // Salvar HTML temporariamente
+    const presentationId = `pres_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const htmlFileName = `${presentationId}.html`;
+    const htmlFilePath = path.join(__dirname, 'generated', htmlFileName);
+    await fs.writeFile(htmlFilePath, finalHTML, 'utf-8');
+
+    console.log(`✅ HTML gerado: ${htmlFilePath}`);
+
+    // PASSO 2: Converter HTML para PPTX usando screenshots
+    const htmlToPptx = new HTMLtoPPTXService();
+    const pptxFileName = `pptx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.pptx`;
+
+    const result = await htmlToPptx.convertHTMLtoPPTX(
+      htmlFilePath,
+      pptxFileName
+    );
+
+    console.log(`✅ PPTX criado: ${result.fileName} (${result.slideCount} slides)`);
+
+    res.json({
+      success: true,
+      message: `PPTX profissional gerado com ${result.slideCount} slides`,
+      fileName: result.fileName,
+      downloadUrl: result.url,
+      slideCount: result.slideCount
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao gerar PPTX:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Erro ao gerar PPTX'
+    });
+  }
+});
+
+// ===== CANVA OAUTH ROUTES =====
+const CanvaOAuthService = require('./services/CanvaOAuthService');
+const canvaService = new CanvaOAuthService();
+
+// Iniciar autorização Canva
+app.get('/api/canva/connect', (req, res) => {
+  const userId = req.user?.id || 'anonymous';
+  const authUrl = canvaService.getAuthorizationUrl(userId);
+
+  console.log('🔗 Redirecionando para autorização Canva...');
+  res.redirect(authUrl);
+});
+
+// Callback OAuth Canva
+app.get('/api/canva/callback', async (req, res) => {
+  try {
+    const { code, state } = req.query;
+
+    if (!code) {
+      throw new Error('Código de autorização não recebido');
+    }
+
+    console.log('✅ Código OAuth recebido, trocando por token...');
+
+    // Trocar código por token
+    const tokenData = await canvaService.exchangeCodeForToken(code);
+
+    // Redirecionar de volta para app com sucesso
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Canva Conectado</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #1e5c3f 0%, #2d7a55 100%);
+          }
+          .card {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 500px;
+          }
+          h1 { color: #1e5c3f; margin-bottom: 20px; }
+          p { color: #666; margin-bottom: 30px; }
+          .btn {
+            background: #1e5c3f;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+          }
+          .btn:hover { background: #2d7a55; }
+          .icon { font-size: 60px; margin-bottom: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <div class="icon">✅</div>
+          <h1>Canva Conectado!</h1>
+          <p>Sua conta Canva foi conectada com sucesso. Você já pode gerar apresentações profissionais.</p>
+          <a href="/" class="btn">Voltar para o App</a>
+        </div>
+        <script>
+          // Send success message to parent window
+          if (window.opener) {
+            window.opener.postMessage({ type: 'canva-auth-success', timestamp: Date.now() }, '*');
+            console.log('✅ Success message sent to parent window');
+          }
+          // Auto-close after 2 seconds
+          setTimeout(() => {
+            window.close();
+            // Fallback if window.close() doesn't work
+            window.location.href = '/';
+          }, 2000);
+        </script>
+      </body>
+      </html>
+    `);
+
+  } catch (error) {
+    console.error('❌ Erro no callback OAuth:', error);
+    res.status(500).send(`
+      <html>
+        <body style="font-family: Arial; text-align: center; padding: 50px;">
+          <h1 style="color: red;">Erro ao conectar Canva</h1>
+          <p>${error.message}</p>
+          <a href="/" style="color: #1e5c3f;">Voltar</a>
+        </body>
+      </html>
+    `);
+  }
+});
+
+// Gerar PPTX via Canva (requer OAuth)
+app.post('/api/canva/generate-pptx', optionalAuth, async (req, res) => {
+  try {
+    const { briefing, title } = req.body;
+
+    if (!briefing) {
+      return res.status(400).json({
+        success: false,
+        error: 'Briefing é obrigatório'
+      });
+    }
+
+    console.log('🎨 Gerando PPTX via Canva API...');
+
+    const presentationTitle = title || briefing.substring(0, 50);
+
+    const result = await canvaService.generatePresentationPPTX(presentationTitle);
+
+    res.json({
+      success: true,
+      message: 'PPTX gerado via Canva com sucesso!',
+      fileName: result.fileName,
+      downloadUrl: result.url,
+      designId: result.designId,
+      editUrl: `https://www.canva.com/design/${result.designId}/edit`
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao gerar via Canva:', error);
+
+    if (error.message.includes('não autenticado')) {
+      return res.status(401).json({
+        success: false,
+        error: 'Canva não conectado. Clique em "Conectar Canva" primeiro.',
+        needsAuth: true
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Erro ao gerar PPTX via Canva'
+    });
+  }
 });
 
 // ===== PRESENTATION HISTORY ROUTES =====

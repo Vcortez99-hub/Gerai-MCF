@@ -11,6 +11,7 @@ class PresentationGenerator {
         await this.loadAvailablePrompts();
         this.setupEventListeners();
         this.setupFormValidation();
+        this.checkCanvaConnectionState();
     }
 
     async checkSystemHealth() {
@@ -172,6 +173,24 @@ class PresentationGenerator {
     setupEventListeners() {
         const form = document.getElementById('presentationForm');
         form.addEventListener('submit', (e) => this.handleFormSubmit(e));
+
+        // Botão PPTX Screenshot
+        const pptxBtn = document.getElementById('generatePPTXBtn');
+        if (pptxBtn) {
+            pptxBtn.addEventListener('click', (e) => this.handlePPTXGeneration(e));
+        }
+
+        // Botão Conectar Canva
+        const connectCanvaBtn = document.getElementById('connectCanvaBtn');
+        if (connectCanvaBtn) {
+            connectCanvaBtn.addEventListener('click', () => this.connectCanva());
+        }
+
+        // Botão Gerar com Canva
+        const generateCanvaBtn = document.getElementById('generateCanvaPPTXBtn');
+        if (generateCanvaBtn) {
+            generateCanvaBtn.addEventListener('click', (e) => this.handleCanvaPPTXGeneration(e));
+        }
 
         document.getElementById('briefing').addEventListener('input', (e) => {
             this.updateCharacterCount(e.target);
@@ -350,6 +369,57 @@ class PresentationGenerator {
             attachments: attachments,
             logoUrls: logoUrls
         };
+    }
+
+    async handlePPTXGeneration(e) {
+        e.preventDefault();
+
+        if (!this.validateForm()) {
+            return;
+        }
+
+        const formData = this.getFormData();
+
+        // Loading
+        document.getElementById('loadingSection').style.display = 'block';
+        document.getElementById('presentationForm').style.opacity = '0.3';
+        document.getElementById('presentationForm').style.pointerEvents = 'none';
+
+        try {
+            const response = await fetch('/api/generate-pptx', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    briefing: formData.briefing,
+                    config: formData.config,
+                    attachments: formData.attachments
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                this.showNotification(`✅ PowerPoint gerado! <a href="${result.downloadUrl}" download class="btn btn-sm btn-success ms-2">📥 Baixar PPTX</a>`, 'success');
+
+                // Download automático
+                const link = document.createElement('a');
+                link.href = result.downloadUrl;
+                link.download = result.fileName;
+                link.click();
+            } else {
+                this.showError(result.error || 'Erro ao gerar PPTX');
+            }
+
+        } catch (error) {
+            console.error('Erro:', error);
+            this.showError('Erro ao gerar PowerPoint: ' + error.message);
+        } finally {
+            document.getElementById('loadingSection').style.display = 'none';
+            document.getElementById('presentationForm').style.opacity = '1';
+            document.getElementById('presentationForm').style.pointerEvents = 'auto';
+        }
     }
 
     async generatePresentation(formData) {
@@ -699,6 +769,124 @@ class PresentationGenerator {
             this.showNotification('Erro ao copiar', 'danger');
         });
     }
+
+    /**
+     * Check if Canva is already connected on page load
+     */
+    checkCanvaConnectionState() {
+        const isCanvaConnected = localStorage.getItem('canvaConnected') === 'true';
+        const connectBtn = document.getElementById('connectCanvaBtn');
+        const generateBtn = document.getElementById('generateCanvaPPTXBtn');
+
+        if (isCanvaConnected && connectBtn && generateBtn) {
+            console.log('✅ Canva already connected (from previous session)');
+            connectBtn.innerHTML = '<i class="fas fa-check"></i> Conectado';
+            connectBtn.disabled = true;
+            generateBtn.style.display = 'inline-block';
+        }
+    }
+
+    /**
+     * Conectar conta Canva via OAuth
+     */
+    connectCanva() {
+        console.log('🔗 Conectando Canva...');
+        const width = 600;
+        const height = 700;
+        const left = (screen.width / 2) - (width / 2);
+        const top = (screen.height / 2) - (height / 2);
+
+        const popup = window.open('/api/canva/connect', 'CanvaOAuth', `width=${width},height=${height},top=${top},left=${left}`);
+
+        // Listen for message from callback page
+        const messageHandler = (event) => {
+            // Security: check origin if needed
+            if (event.data && event.data.type === 'canva-auth-success') {
+                console.log('✅ Canva OAuth success message received');
+                localStorage.setItem('canvaConnected', 'true');
+                localStorage.setItem('canvaConnectedAt', Date.now().toString());
+
+                document.getElementById('generateCanvaPPTXBtn').style.display = 'inline-block';
+                document.getElementById('connectCanvaBtn').innerHTML = '<i class="fas fa-check"></i> Conectado';
+                document.getElementById('connectCanvaBtn').disabled = true;
+                this.showNotification('✅ Canva conectado com sucesso!', 'success');
+
+                window.removeEventListener('message', messageHandler);
+            }
+        };
+        window.addEventListener('message', messageHandler);
+
+        // Fallback: check popup closed (in case message doesn't arrive)
+        const checkPopup = setInterval(() => {
+            if (popup.closed) {
+                clearInterval(checkPopup);
+                // Check if we got the message, if not, assume connection failed
+                if (localStorage.getItem('canvaConnected') !== 'true') {
+                    console.log('⚠️ Popup closed but no success message received');
+                    this.showNotification('⚠️ Conexão cancelada ou falhou. Tente novamente.', 'warning');
+                    window.removeEventListener('message', messageHandler);
+                }
+            }
+        }, 500);
+    }
+
+    /**
+     * Gerar PPTX via Canva API
+     */
+    async handleCanvaPPTXGeneration(e) {
+        e.preventDefault();
+
+        // CHECK: Verify Canva is connected before proceeding
+        const isCanvaConnected = localStorage.getItem('canvaConnected') === 'true';
+        if (!isCanvaConnected) {
+            this.showError('Canva não conectado. Clique em "Conectar Canva" primeiro.');
+            return;
+        }
+
+        if (!this.validateForm()) return;
+
+        const formData = this.getFormData();
+        document.getElementById('loadingSection').style.display = 'block';
+
+        try {
+            const response = await fetch('/api/canva/generate-pptx', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ briefing: formData.briefing, title: `Apresentação ${Date.now()}` })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                this.showNotification('✅ PPTX gerado via Canva!', 'success');
+                const link = document.createElement('a');
+                link.href = result.downloadUrl;
+                link.download = result.fileName;
+                link.click();
+
+                if (result.editUrl) {
+                    setTimeout(() => {
+                        if (confirm('Abrir no Canva para editar?')) {
+                            window.open(result.editUrl, '_blank');
+                        }
+                    }, 1000);
+                }
+            } else {
+                // If server says not authenticated, clear local state
+                if (result.needsAuth || result.error?.includes('não conectado')) {
+                    localStorage.removeItem('canvaConnected');
+                    localStorage.removeItem('canvaConnectedAt');
+                    this.showError('Sessão Canva expirou. Reconecte sua conta.');
+                } else {
+                    this.showError(result.error || 'Erro ao gerar via Canva');
+                }
+            }
+        } catch (error) {
+            this.showError('Erro: ' + error.message);
+        } finally {
+            document.getElementById('loadingSection').style.display = 'none';
+        }
+    }
 }
 
 // Inicializar a aplicação quando o DOM estiver carregado
@@ -886,6 +1074,9 @@ function handleAttachmentUpload(input) {
 
         reader.readAsDataURL(file);
     });
+
+    // Limpar o input para permitir re-seleção dos mesmos arquivos
+    input.value = '';
 }
 
 // Remover anexo
@@ -928,7 +1119,12 @@ function setupAttachmentDragDrop() {
         }
     });
 
-    uploadZone.addEventListener('click', () => {
+    uploadZone.addEventListener('click', (e) => {
+        // Prevenir duplo clique se vier do botão interno
+        if (e.target.closest('button')) {
+            e.stopPropagation();
+            return;
+        }
         document.getElementById('attachmentInput').click();
     });
 
@@ -1228,7 +1424,7 @@ function renderHistoryList(presentations) {
                             <i class="fas fa-ellipsis-v"></i>
                         </button>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="${presentation.generated_file_url}" target="_blank">
+                            <li><a class="dropdown-item" href="${presentation.generated_file_path || '#'}" target="_blank">
                                 <i class="fas fa-external-link-alt me-2"></i>Abrir
                             </a></li>
                             <li><a class="dropdown-item" href="#" onclick="editPresentationTitle('${presentation.id}', '${presentation.title.replace(/'/g, "\\'")}')">
@@ -1244,7 +1440,7 @@ function renderHistoryList(presentations) {
                 <div class="card-body">
                     <h6 class="card-title text-primary fw-bold">${presentation.title}</h6>
                     <p class="card-text text-muted small mb-2">
-                        <strong>Template:</strong> ${presentation.template_name || presentation.template_id}
+                        <strong>Template:</strong> ${presentation.template_id || 'Padrão'}
                     </p>
                     <p class="card-text small text-truncate" style="max-height: 3em; overflow: hidden;">
                         ${presentation.briefing}
@@ -1261,7 +1457,7 @@ function renderHistoryList(presentations) {
                     </div>
                 </div>
                 <div class="card-footer bg-transparent">
-                    <a href="${presentation.generated_file_url}" target="_blank" class="btn btn-primary btn-sm w-100">
+                    <a href="${presentation.generated_file_path || '#'}" target="_blank" class="btn btn-primary btn-sm w-100">
                         <i class="fas fa-eye"></i>
                         Visualizar Apresentação
                     </a>
